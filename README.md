@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Welcome to NexOS
 
 TODO: Document your project here
