@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-	<strong>AI-inspired browser desktop OS built with React, TypeScript, and Vite.</strong>
+	<strong>AI-driven browser desktop OS with backend-authenticated security, built with React, TypeScript, Vite, and Express.</strong>
 </p>
 
 <p align="center">
@@ -13,6 +13,7 @@
 	<img alt="React" src="https://img.shields.io/badge/React-18.x-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
 	<img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
 	<img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind-3.x-0F172A?style=for-the-badge&logo=tailwindcss&logoColor=38BDF8" />
+	<img alt="Express" src="https://img.shields.io/badge/Express-5.x-111111?style=for-the-badge&logo=express&logoColor=white" />
 	<img alt="Vitest" src="https://img.shields.io/badge/Vitest-3.x-202020?style=for-the-badge&logo=vitest&logoColor=6E9F18" />
 </p>
 
@@ -25,9 +26,10 @@ NexOS is a full-screen web desktop experience that simulates an operating system
 - boot sequence and lock screen
 - desktop shell with windows, dock, and system controls
 - app launcher with multiple built-in apps
-- themes, wallpapers, and security logs
+- local AI assistant and smart telemetry-driven insights
+- themes, wallpapers, and backend-backed security logs
 
-The project is organized as a modular frontend platform where the desktop shell, OS state, and each app are isolated into clean domains.
+The project is organized as a modular frontend + backend platform where the desktop shell, OS state, API security layer, and each app are isolated into clean domains.
 
 ---
 
@@ -36,6 +38,12 @@ The project is organized as a modular frontend platform where the desktop shell,
 - React 18: UI composition and rendering
 - TypeScript: static types for OS state and app modules
 - Vite: dev server, HMR, and production bundling
+- Express: backend API for auth/session/security endpoints
+- bcryptjs: password hashing
+- cookie-parser: HttpOnly cookie session handling
+- express-rate-limit: brute-force protection on login
+- Helmet + CORS: API hardening
+- Zod: runtime input validation
 - Tailwind CSS: design tokens and utility-based styling
 - shadcn/ui + Radix UI: accessible, reusable component primitives
 - React Router: route management
@@ -53,9 +61,16 @@ nexos/
 	public/
 		boot/                 # Logo and boot audio assets
 
+		server/
+			index.ts              # Express API entry (auth/session/security routes)
+			security-store.ts     # Password hash state, lockout, sessions, logs
+			.env.example          # Backend env template
+			data/                 # Runtime security state/log persistence
+
 	src/
 		os/
 			apps/              # Individual desktop applications
+				aiEngine.ts         # Local AI engine for predictions/telemetry insights
 			OSContext.tsx      # Global OS state (auth/windows/theme/wallpaper/logs)
 			Desktop.tsx        # Desktop shell UI (menu bar, dock, launchpad, panels)
 			Window.tsx         # Draggable/minimizable/maximizable window frame
@@ -71,6 +86,9 @@ nexos/
 		lib/                 # Utility helpers
 		pages/               # Route-level pages
 		test/                # Vitest setup and tests
+
+		docs/
+			security-overview.md # Collaborator-facing security implementation details
 ```
 
 ---
@@ -83,19 +101,47 @@ nexos/
 npm install
 ```
 
-### 2. Run Dev Server
+### 2. Configure Backend Environment
+
+Create a local backend env file:
+
+```bash
+cp server/.env.example server/.env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item server/.env.example server/.env
+```
+
+Then edit `server/.env` values:
+
+- `PORT=3001`
+- `NEXOS_INITIAL_PASSWORD=ChangeThis123!`
+
+### 3. Run Frontend and Backend
+
+Start backend:
+
+```bash
+npm run dev:backend
+```
+
+In another terminal, start frontend:
 
 ```bash
 npm run dev
 ```
 
-The app runs on Vite default port unless overridden.
+Frontend runs on Vite default port and proxies `/api` requests to backend `http://localhost:3001`.
 
 ---
 
 ## Available Scripts
 
 - `npm run dev`: start local development server
+- `npm run dev:backend`: start backend API with watch mode
 - `npm run build`: create production build
 - `npm run build:dev`: build with development mode config
 - `npm run preview`: preview production build locally
@@ -108,6 +154,30 @@ Windows helpers:
 - `start-local-8080.bat`: start app on port 8080
 - `stop-local-8080.bat`: stop process bound to port 8080
 - `update-and-start-8080.bat`: pull latest, install deps, and start on 8080
+
+---
+
+## Security Model (Current)
+
+- Backend-authenticated login and lock state
+- Password hashing with bcrypt (cost 12)
+- HttpOnly cookie sessions (SameSite=lax, secure in production)
+- Lockout after 5 failed attempts for 30 seconds
+- Login endpoint rate limiting (10 requests/minute)
+- Zod-validated auth and log payloads
+- Server-side security event logs
+- Frontend idle/visibility auto-lock behaviors
+
+Detailed doc: [docs/security-overview.md](docs/security-overview.md)
+
+---
+
+## AI and Monitoring
+
+- Local AI assistant behavior (no external AI API dependency)
+- App usage tracking and prediction hints
+- Live telemetry for system load and resource allocation insights
+- Task Manager surfaces AI-driven status/optimization context
 
 ---
 
@@ -247,7 +317,8 @@ Types:
 - richer app persistence across sessions
 - stronger test coverage for window/state transitions
 - plugin-like architecture for third-party apps
-- optional backend sync for user profiles and files
+- database-backed auth/session persistence for multi-instance deployments
+- stricter CSP and production-grade TLS + secrets management
 
 ---
 

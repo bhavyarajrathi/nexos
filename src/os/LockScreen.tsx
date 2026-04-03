@@ -23,10 +23,15 @@ const LockScreen: React.FC = () => {
     }
   }, [failedAttempts]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (locked) return;
-    if (!unlock(pin)) {
+    setSubmitting(true);
+    const success = await unlock(pin);
+    setSubmitting(false);
+    if (!success) {
       setError(true);
       setPin('');
       setTimeout(() => setError(false), 1500);
@@ -123,12 +128,10 @@ const LockScreen: React.FC = () => {
               <p className="auth-feedback auth-feedback--muted">{5 - failedAttempts} attempts remaining</p>
             )}
 
-            <button type="submit" disabled={locked || !pin} className="auth-submit">
+            <button type="submit" disabled={locked || submitting || !pin} className="auth-submit">
               Unlock NexOS
             </button>
           </form>
-
-          <p className="auth-footnote">Default password: 1234</p>
         </section>
       </div>
     </div>

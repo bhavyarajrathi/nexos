@@ -96,12 +96,12 @@ const Settings: React.FC = () => {
               <div className="flex gap-2">
                 <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
                   placeholder="New password" className="flex-1 h-8 px-3 text-xs rounded-lg bg-white/5 border border-white/10 outline-none" />
-                <button onClick={() => { if (newPw.length >= 4) { setPassword(newPw); setNewPw(''); } }}
+                <button onClick={() => { void setPassword(newPw).then(success => { if (success) setNewPw(''); }); }}
                   className="px-3 h-8 text-xs rounded-lg bg-cyan-500/20 border border-cyan-400/30 hover:bg-cyan-500/30">
                   Update
                 </button>
               </div>
-              <p className="text-[10px] opacity-40">Minimum 4 characters</p>
+              <p className="text-[10px] opacity-40">Minimum 8 characters with letters and numbers</p>
             </div>
             <button onClick={lock}
               className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg bg-red-500/15 border border-red-400/20 hover:bg-red-500/25">

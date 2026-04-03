@@ -1,38 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { Cpu, HardDrive, Wifi, Activity } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Cpu, HardDrive, Wifi, Activity, Sparkles, Zap } from 'lucide-react';
+import { useOS } from '../OSContext';
 
 const TaskManager: React.FC = () => {
-  const [cpu, setCpu] = useState(23);
-  const [mem, setMem] = useState(42);
-  const [net, setNet] = useState(15);
+  const { windows, aiInsights, systemTelemetry, openApp } = useOS();
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setCpu(p => Math.max(5, Math.min(95, p + (Math.random() - 0.5) * 10)));
-      setMem(p => Math.max(20, Math.min(85, p + (Math.random() - 0.5) * 5)));
-      setNet(p => Math.max(0, Math.min(100, p + (Math.random() - 0.5) * 20)));
-    }, 1500);
-    return () => clearInterval(t);
-  }, []);
+  const processes = useMemo(() => {
+    const openProcesses = windows.map(window => {
+      const activeWeight = window.minimized ? 0.45 : 1;
+      const cpu = Number((1.1 + window.width / 340 + (window.maximized ? 1.2 : 0)) * activeWeight).toFixed(1);
+      const mem = Math.round((window.width / 3.8 + window.height / 6.5) * activeWeight);
 
-  const processes = [
-    { name: 'nex-shell', cpu: 2.1, mem: 45 },
-    { name: 'security-daemon', cpu: 0.5, mem: 22 },
-    { name: 'ai-engine', cpu: 8.3, mem: 128 },
-    { name: 'window-manager', cpu: 1.2, mem: 34 },
-    { name: 'network-service', cpu: 0.8, mem: 18 },
-    { name: 'file-system', cpu: 0.3, mem: 56 },
-    { name: 'audio-server', cpu: 1.5, mem: 28 },
-    { name: 'render-engine', cpu: 4.2, mem: 96 },
-  ];
+      return {
+        name: window.appId,
+        cpu,
+        mem,
+      };
+    });
+
+    return [
+      { name: 'nex-shell', cpu: Number((systemTelemetry.cpu * 0.06).toFixed(1)), mem: Math.round(34 + systemTelemetry.backgroundLoad * 0.5) },
+      { name: 'security-daemon', cpu: 0.6, mem: 24 },
+      { name: 'ai-engine', cpu: Number((aiInsights.resourceAllocation.ai * 0.32).toFixed(1)), mem: Math.round(96 + aiInsights.topPicks.length * 12) },
+      { name: 'window-manager', cpu: Number((systemTelemetry.activeWindows * 0.9 + 0.8).toFixed(1)), mem: Math.round(30 + systemTelemetry.activeWindows * 8) },
+      { name: 'network-service', cpu: Number((systemTelemetry.network * 0.04).toFixed(1)), mem: Math.round(18 + systemTelemetry.network * 0.4) },
+      ...openProcesses,
+    ];
+  }, [windows, systemTelemetry, aiInsights]);
 
   return (
     <div className="p-4 space-y-4 text-xs">
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'CPU', value: cpu, icon: Cpu, color: 'cyan' },
-          { label: 'Memory', value: mem, icon: HardDrive, color: 'purple' },
-          { label: 'Network', value: net, icon: Wifi, color: 'green' },
+          { label: 'CPU', value: systemTelemetry.cpu, icon: Cpu, color: 'cyan' },
+          { label: 'Memory', value: systemTelemetry.memory, icon: HardDrive, color: 'purple' },
+          { label: 'Network', value: systemTelemetry.network, icon: Wifi, color: 'green' },
         ].map(m => (
           <div key={m.label} className="p-3 rounded-lg bg-white/5 space-y-2">
             <div className="flex items-center gap-1.5">
@@ -47,6 +49,34 @@ const TaskManager: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-lg bg-white/5 space-y-2">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider opacity-40">
+            <span>Automation Mode</span>
+            <span>{aiInsights.automationMode}</span>
+          </div>
+          <p className="text-sm leading-relaxed opacity-80">{aiInsights.summary}</p>
+        </div>
+        <div className="p-3 rounded-lg bg-white/5 space-y-2">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider opacity-40">
+            <span>Resource Allocation</span>
+            <span>Live</span>
+          </div>
+          <div className="space-y-1.5">
+            {Object.entries(aiInsights.resourceAllocation).map(([label, value]) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className="w-20 capitalize opacity-60">{label}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full rounded-full bg-cyan-400" style={{ width: `${value}%` }} />
+                </div>
+                <span className="w-8 text-right opacity-60">{value}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="font-semibold mb-2">Processes</h3>
         <div className="space-y-1">
@@ -63,6 +93,39 @@ const TaskManager: React.FC = () => {
               <span className="w-16 text-right opacity-60">{p.mem}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <h3 className="font-semibold mb-2">Predicted Interests</h3>
+          <div className="space-y-2">
+            {aiInsights.topPicks.map(item => (
+              <button key={item.appId} onClick={() => openApp(item.appId)} className="w-full flex items-center justify-between gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-left">
+                <div>
+                  <p className="font-medium">{item.label}</p>
+                  <p className="text-[10px] opacity-50">{item.reason}</p>
+                </div>
+                <span className="text-[10px] opacity-50">{item.category}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-semibold mb-2 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Optimization Plan</h3>
+          <div className="space-y-2">
+            {aiInsights.optimizationPlan.map(step => (
+              <div key={step.area} className="p-2 rounded-lg bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{step.area}</p>
+                  <Zap className="w-3 h-3 opacity-40" />
+                </div>
+                <p className="opacity-60">{step.action}</p>
+                <p className="text-[10px] opacity-40 mt-1">{step.impact}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

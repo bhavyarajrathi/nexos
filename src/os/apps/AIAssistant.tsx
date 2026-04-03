@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { useOS } from '../OSContext';
+import { ChatMessage, generateAssistantReply } from '../aiEngine';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -7,8 +9,9 @@ interface Message {
 }
 
 const AIAssistant: React.FC = () => {
+  const { assistantContext, openApp } = useOS();
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hello! I\'m NexOS AI, your personal assistant. I can help you with tasks, answer questions, generate themes, and more. How can I help you today?' }
+    { role: 'assistant', content: 'Hello! I\'m NexOS AI, your personal assistant. I can help you with tasks, answer questions, automate app launches, and optimize the system in real time. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,8 +19,49 @@ const AIAssistant: React.FC = () => {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const respond = (userMsg: string): string => {
+  const appLaunchMap: Record<string, string> = {
+    calculator: 'calculator',
+    calendar: 'calendar',
+    browser: 'browser',
+    chrome: 'browser',
+    files: 'files',
+    nexfiles: 'files',
+    terminal: 'terminal',
+    settings: 'settings',
+    mail: 'mail',
+    music: 'music',
+    photos: 'photos',
+    video: 'video',
+    code: 'code',
+    editor: 'code',
+    ai: 'ai',
+    assistant: 'ai',
+    taskmanager: 'taskmanager',
+    'task manager': 'taskmanager',
+    todo: 'todo',
+    notes: 'notepad',
+    notepad: 'notepad',
+    maps: 'maps',
+    weather: 'weather',
+  };
+
+  const resolveLaunchTarget = (text: string) => {
+    const lower = text.toLowerCase();
+    const commandMatch = lower.match(/(?:open|launch|start)\s+(?:the\s+)?(.+)$/i);
+    if (!commandMatch) return null;
+
+    const candidate = commandMatch[1].trim();
+    const found = Object.entries(appLaunchMap).find(([key]) => candidate.includes(key));
+    return found ? found[1] : null;
+  };
+
+  const respondFallback = (userMsg: string): string => {
     const lower = userMsg.toLowerCase();
+    const launchTarget = resolveLaunchTarget(userMsg);
+    if (launchTarget) {
+      return `Opening ${launchTarget}. I\'m also tracking your usage so I can prioritize it automatically next time.`;
+    }
+
     if (lower.includes('theme') && (lower.includes('create') || lower.includes('generate') || lower.includes('make'))) {
       return `🎨 I've designed a custom theme based on your request! Here's a preview:\n\n• **Primary**: A dynamic accent color\n• **Background**: Rich dark tone\n• **Text**: High contrast for readability\n\nTo apply custom themes, go to Settings > Themes and look for the closest match. In a future update, I'll be able to directly apply AI-generated themes!`;
     }
@@ -57,21 +101,36 @@ const AIAssistant: React.FC = () => {
       } catch {}
       return `Try using the Calculator app for complex calculations, or type a simple expression like "25 + 17"`;
     }
-    return `I understand you're asking about "${userMsg}". While I'm running locally without an AI backend, I can still help with theme generation, security info, system commands, and basic calculations. Try asking me to "create a theme" or "check security"! 🚀`;
+    return `I understand you're asking about "${userMsg}". I can automate app launches, optimize system priorities, and help with theme generation, security info, and basic calculations. Try asking me to "open calendar" or "check system health".`;
   };
 
-  const send = () => {
+  const send = async () => {
     if (!input.trim() || loading) return;
-    const userMsg: Message = { role: 'user', content: input };
+    const userText = input;
+    const userMsg: Message = { role: 'user', content: userText };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
-    setTimeout(() => {
-      const response = respond(input);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+    try {
+      const launchTarget = resolveLaunchTarget(userText);
+      if (launchTarget) {
+        openApp(launchTarget);
+        setMessages(prev => [...prev, { role: 'assistant', content: respondFallback(userText) }]);
+        return;
+      }
+
+      const conversation: ChatMessage[] = [...messages, userMsg].slice(-12).map(message => ({
+        role: message.role,
+        content: message.content,
+      }));
+
+      const response = await generateAssistantReply(conversation, assistantContext);
+      const reply = response || `I couldn\'t generate a model response right now. Try again in a moment, or ask me to open an app like "open calendar".`;
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+    } finally {
       setLoading(false);
-    }, 800 + Math.random() * 700);
+    }
   };
 
   return (
@@ -81,7 +140,7 @@ const AIAssistant: React.FC = () => {
           <Sparkles className="w-3 h-3 text-white" />
         </div>
         <span className="text-xs font-medium">NexOS AI Assistant</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">Online</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">Local AI</span>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.map((msg, i) => (
