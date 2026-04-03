@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Mail as MailIcon, Star, Trash2, Send, Inbox, Edit } from 'lucide-react';
 
 const sampleMails = [
-  { id: '1', from: 'system@nova-os.com', subject: 'Welcome to NOVA OS', body: 'Welcome to NOVA OS! Your system is now configured and ready to use.\n\nExplore themes, wallpapers, and apps to customize your experience.\n\n— NOVA OS Team', date: 'Today', starred: true, read: true },
-  { id: '2', from: 'security@nova-os.com', subject: 'Security Report', body: 'Your system security scan is complete.\n\nAll systems are secure. No threats detected.\nEncryption: AES-256 Active\nFirewall: Enabled\n\n— Security Daemon', date: 'Today', starred: false, read: false },
-  { id: '3', from: 'ai@nova-os.com', subject: 'AI Assistant Update', body: 'NOVA AI has been updated to v2.0.\n\nNew features:\n- Theme generation\n- Icon design suggestions\n- Enhanced natural language processing\n\n— AI Team', date: 'Yesterday', starred: false, read: false },
-  { id: '4', from: 'updates@nova-os.com', subject: 'System Update Available', body: 'A new system update is available.\n\nVersion 3.0.1 includes:\n- Performance improvements\n- Bug fixes\n- New wallpapers\n\nUpdate at your convenience.', date: 'Yesterday', starred: false, read: true },
+  { id: '1', from: 'system@nexos.com', subject: 'Welcome to NexOS', body: 'Welcome to NexOS! Your system is now configured and ready to use.\n\nExplore themes, wallpapers, and apps to customize your experience.\n\n— NexOS Team', date: 'Today', starred: true, read: true },
+  { id: '2', from: 'security@nexos.com', subject: 'Security Report', body: 'Your system security scan is complete.\n\nAll systems are secure. No threats detected.\nEncryption: AES-256 Active\nFirewall: Enabled\n\n— Security Daemon', date: 'Today', starred: false, read: false },
+  { id: '3', from: 'ai@nexos.com', subject: 'AI Assistant Update', body: 'NexOS AI has been updated to v2.0.\n\nNew features:\n- Theme generation\n- Icon design suggestions\n- Enhanced natural language processing\n\n— AI Team', date: 'Yesterday', starred: false, read: false },
+  { id: '4', from: 'updates@nexos.com', subject: 'System Update Available', body: 'A new system update is available.\n\nVersion 3.0.1 includes:\n- Performance improvements\n- Bug fixes\n- New wallpapers\n\nUpdate at your convenience.', date: 'Yesterday', starred: false, read: true },
 ];
 
 const MailApp: React.FC = () => {

@@ -16,7 +16,7 @@ const TaskManager: React.FC = () => {
   }, []);
 
   const processes = [
-    { name: 'nova-shell', cpu: 2.1, mem: 45 },
+    { name: 'nex-shell', cpu: 2.1, mem: 45 },
     { name: 'security-daemon', cpu: 0.5, mem: 22 },
     { name: 'ai-engine', cpu: 8.3, mem: 128 },
     { name: 'window-manager', cpu: 1.2, mem: 34 },

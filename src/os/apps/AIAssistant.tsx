@@ -8,7 +8,7 @@ interface Message {
 
 const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hello! I\'m NOVA AI, your personal assistant. I can help you with tasks, answer questions, generate themes, and more. How can I help you today?' }
+    { role: 'assistant', content: 'Hello! I\'m NexOS AI, your personal assistant. I can help you with tasks, answer questions, generate themes, and more. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ const AIAssistant: React.FC = () => {
       return `🖼️ Check out Settings > Wallpapers for 50+ wallpapers across categories like Space, Ocean, Nature, Cyber, and more! You can also tell me what mood you want and I'll suggest the perfect wallpaper.`;
     }
     if (lower.includes('security') || lower.includes('secure')) {
-      return `🔒 NOVA OS Security Features:\n\n• **Encrypted Sessions**: AES-256 encryption\n• **Failed Login Protection**: Auto-lockout after 5 attempts\n• **Security Logs**: Full audit trail in Settings > Security\n• **Password Protection**: Customizable passwords\n• **Session Isolation**: Each window runs in isolation\n\nWould you like me to help you configure any security settings?`;
+      return `🔒 NexOS Security Features:\n\n• **Encrypted Sessions**: AES-256 encryption\n• **Failed Login Protection**: Auto-lockout after 5 attempts\n• **Security Logs**: Full audit trail in Settings > Security\n• **Password Protection**: Customizable passwords\n• **Session Isolation**: Each window runs in isolation\n\nWould you like me to help you configure any security settings?`;
     }
     if (lower.includes('help') || lower.includes('what can')) {
       return `I can help with:\n\n• 🎨 **Theme Generation** - "Create a sunset theme"\n• 🖼️ **Icon Design** - "Generate a music icon"\n• ⚙️ **Settings** - "Change my wallpaper"\n• 🔒 **Security** - "Check security status"\n• 📝 **Tasks** - "Remind me to..."\n• 🧮 **Calculations** - "What's 15% of 200?"\n• 🌍 **Info** - "What time is it in Tokyo?"\n\nJust ask away!`;
@@ -38,7 +38,7 @@ const AIAssistant: React.FC = () => {
       return `🕐 Current time: ${now.toLocaleTimeString()}\n📅 Date: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
     }
     if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-      return `Hey there! 👋 Welcome to NOVA OS. I'm here to help make your experience amazing. What would you like to do?`;
+      return `Hey there! 👋 Welcome to NexOS. I'm here to help make your experience amazing. What would you like to do?`;
     }
     if (lower.includes('calculate') || lower.includes('what\'s') || lower.includes('whats') || lower.match(/\d+\s*[\+\-\*\/]\s*\d+/)) {
       try {
@@ -80,7 +80,7 @@ const AIAssistant: React.FC = () => {
         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center">
           <Sparkles className="w-3 h-3 text-white" />
         </div>
-        <span className="text-xs font-medium">NOVA AI Assistant</span>
+        <span className="text-xs font-medium">NexOS AI Assistant</span>
         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">Online</span>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -115,7 +115,7 @@ const AIAssistant: React.FC = () => {
         <div ref={endRef} />
       </div>
       <form onSubmit={e => { e.preventDefault(); send(); }} className="flex items-center gap-2 p-3 border-t border-white/10">
-        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask NOVA AI anything..."
+        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask NexOS AI anything..."
           className="flex-1 h-8 px-3 text-xs rounded-lg bg-white/5 border border-white/10 outline-none focus:border-cyan-400/30" />
         <button type="submit" disabled={loading || !input.trim()}
           className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center hover:bg-cyan-500/30 disabled:opacity-30">

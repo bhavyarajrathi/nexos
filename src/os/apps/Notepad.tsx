@@ -10,7 +10,7 @@ interface Note {
 
 const Notepad: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([
-    { id: '1', title: 'Welcome', content: 'Welcome to NOVA OS Notepad!\n\nStart typing to create your notes.', updatedAt: new Date() }
+    { id: '1', title: 'Welcome', content: 'Welcome to NexOS Notepad!\n\nStart typing to create your notes.', updatedAt: new Date() }
   ]);
   const [activeId, setActiveId] = useState('1');
   const active = notes.find(n => n.id === activeId);

@@ -133,7 +133,7 @@ const Settings: React.FC = () => {
         )}
         {tab === 'about' && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold">About NOVA OS</h3>
+            <h3 className="text-sm font-semibold">About NexOS</h3>
             <div className="text-xs space-y-1 opacity-70">
               <p>Version: 3.0.0</p>
               <p>Kernel: SecureCore 6.1</p>

@@ -39,7 +39,7 @@ const BootScreen: React.FC = () => {
       <div className="flex items-center gap-3 mb-8 animate-pulse">
         <Shield className="w-12 h-12 text-cyan-400" />
         <span className="text-3xl font-bold tracking-widest text-cyan-400" style={{ fontFamily: 'monospace' }}>
-          NOVA OS
+          NexOS
         </span>
       </div>
       <div className="w-80 h-1 bg-gray-800 rounded-full overflow-hidden mb-4">

@@ -48,7 +48,7 @@ const LockScreen: React.FC = () => {
           <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md">
             <Shield className="w-8 h-8 text-cyan-400" />
           </div>
-          <p className="text-white/80 text-sm">NOVA OS</p>
+          <p className="text-white/80 text-sm">NexOS</p>
         </div>
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col items-center gap-3">
           <div className="relative">
