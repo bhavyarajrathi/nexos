@@ -14,6 +14,13 @@ import TaskManager from './apps/TaskManager';
 import AIAssistant from './apps/AIAssistant';
 import Maps from './apps/Maps';
 import MailApp from './apps/Mail';
+import TodoApp from './apps/TodoApp';
+import PaintApp from './apps/PaintApp';
+import VideoPlayer from './apps/VideoPlayer';
+import CodeEditor from './apps/CodeEditor';
+import SnakeGame from './apps/SnakeGame';
+import Contacts from './apps/Contacts';
+import BooksApp from './apps/BooksApp';
 
 export interface AppDef {
   id: string;
@@ -37,7 +44,14 @@ export const apps: AppDef[] = [
   { id: 'photos', name: 'Photos', icon: '🖼️', component: Photos, category: 'Media' },
   { id: 'calendar', name: 'Calendar', icon: '📅', component: CalendarApp, category: 'Productivity' },
   { id: 'taskmanager', name: 'Task Manager', icon: '📊', component: TaskManager, category: 'System' },
-  { id: 'ai', name: 'NOVA AI', icon: '🤖', component: AIAssistant, category: 'AI' },
+  { id: 'ai', name: 'NexOS AI', icon: '🤖', component: AIAssistant, category: 'AI' },
   { id: 'maps', name: 'Maps', icon: '🗺️', component: Maps, category: 'Utilities' },
   { id: 'mail', name: 'Mail', icon: '✉️', component: MailApp, category: 'Internet' },
+  { id: 'todo', name: 'To-Do', icon: '✅', component: TodoApp, category: 'Productivity' },
+  { id: 'paint', name: 'Paint', icon: '🎨', component: PaintApp, category: 'Creative' },
+  { id: 'video', name: 'Video Player', icon: '🎬', component: VideoPlayer, category: 'Media' },
+  { id: 'code', name: 'Code Editor', icon: '👨‍💻', component: CodeEditor, category: 'Development' },
+  { id: 'snake', name: 'Snake Game', icon: '🐍', component: SnakeGame, category: 'Games' },
+  { id: 'contacts', name: 'Contacts', icon: '👤', component: Contacts, category: 'Productivity' },
+  { id: 'books', name: 'Books', icon: '📚', component: BooksApp, category: 'Media' },
 ];
