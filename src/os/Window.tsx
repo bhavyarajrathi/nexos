@@ -1,6 +1,5 @@
 import React, { useRef, useCallback } from 'react';
 import { useOS } from './OSContext';
-import { X, Minus, Maximize2, Minimize2 } from 'lucide-react';
 import { OSWindow } from './types';
 
 interface Props {
@@ -32,7 +31,7 @@ const Window: React.FC<Props> = ({ window: win, children, title }) => {
   if (win.minimized) return null;
 
   const style: React.CSSProperties = win.maximized
-    ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 48, zIndex: win.zIndex, background: currentTheme.windowBg, borderColor: currentTheme.windowBorder }
+    ? { position: 'fixed', top: 28, left: 0, right: 0, bottom: 48, zIndex: win.zIndex, background: currentTheme.windowBg, borderColor: currentTheme.windowBorder }
     : { position: 'absolute', left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.zIndex, background: currentTheme.windowBg, borderColor: currentTheme.windowBorder };
 
   return (
@@ -41,18 +40,27 @@ const Window: React.FC<Props> = ({ window: win, children, title }) => {
       <div className="flex items-center h-9 px-3 shrink-0 cursor-move select-none"
         onMouseDown={handleMouseDown}
         style={{ background: 'rgba(255,255,255,0.05)', borderBottom: `1px solid ${currentTheme.windowBorder}` }}>
-        <span className="text-xs font-medium flex-1 truncate" style={{ color: currentTheme.taskbarText }}>{title}</span>
-        <div className="flex items-center gap-1">
-          <button onClick={() => minimizeWindow(win.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10">
-            <Minus className="w-3 h-3" style={{ color: currentTheme.taskbarText }} />
-          </button>
-          <button onClick={() => maximizeWindow(win.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10">
-            {win.maximized ? <Minimize2 className="w-3 h-3" style={{ color: currentTheme.taskbarText }} /> : <Maximize2 className="w-3 h-3" style={{ color: currentTheme.taskbarText }} />}
-          </button>
-          <button onClick={() => closeWindow(win.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-red-500/30">
-            <X className="w-3 h-3" style={{ color: currentTheme.taskbarText }} />
-          </button>
+        <div className="flex items-center gap-2 mr-3" onMouseDown={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => { e.stopPropagation(); closeWindow(win.id); }}
+            className="w-3 h-3 rounded-full bg-[#111111] border border-white/15 hover:brightness-125"
+            aria-label="Close window"
+            title="Close"
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); minimizeWindow(win.id); }}
+            className="w-3 h-3 rounded-full bg-[#a855f7] border border-black/20 hover:brightness-110"
+            aria-label="Minimize window"
+            title="Minimize"
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); maximizeWindow(win.id); }}
+            className="w-3 h-3 rounded-full bg-[#ffffff] border border-black/25 hover:brightness-95"
+            aria-label={win.maximized ? 'Restore window' : 'Maximize window'}
+            title={win.maximized ? 'Restore' : 'Maximize'}
+          />
         </div>
+        <span className="text-xs font-medium flex-1 truncate" style={{ color: currentTheme.taskbarText }}>{title}</span>
       </div>
       <div className="flex-1 overflow-auto" style={{ color: currentTheme.taskbarText }}>{children}</div>
     </div>

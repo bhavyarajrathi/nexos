@@ -21,6 +21,8 @@ import CodeEditor from './apps/CodeEditor';
 import SnakeGame from './apps/SnakeGame';
 import Contacts from './apps/Contacts';
 import BooksApp from './apps/BooksApp';
+import NexVpn from './apps/NexVpn';
+import SailorBrowser from './apps/SailorBrowser';
 
 export interface AppDef {
   id: string;
@@ -34,9 +36,10 @@ export const apps: AppDef[] = [
   { id: 'calculator', name: 'Calculator', icon: '🧮', component: Calculator, category: 'Utilities' },
   { id: 'notepad', name: 'Notepad', icon: '📝', component: Notepad, category: 'Productivity' },
   { id: 'terminal', name: 'Terminal', icon: '💻', component: Terminal, category: 'System' },
-  { id: 'files', name: 'Files', icon: '📁', component: FileManager, category: 'System' },
+  { id: 'files', name: 'NexFiles', icon: '🧠', component: FileManager, category: 'System' },
   { id: 'settings', name: 'Settings', icon: '⚙️', component: Settings, category: 'System' },
-  { id: 'browser', name: 'Browser', icon: '🌐', component: Browser, category: 'Internet' },
+  { id: 'browser', name: 'Chrome', icon: '🌐', component: Browser, category: 'Internet' },
+  { id: 'sailor', name: 'Sailor', icon: '⛵', component: SailorBrowser, category: 'Internet' },
   { id: 'weather', name: 'Weather', icon: '🌤️', component: Weather, category: 'Utilities' },
   { id: 'music', name: 'Music', icon: '🎵', component: MusicPlayer, category: 'Media' },
   { id: 'camera', name: 'Camera', icon: '📷', component: Camera, category: 'Media' },
@@ -54,4 +57,5 @@ export const apps: AppDef[] = [
   { id: 'snake', name: 'Snake Game', icon: '🐍', component: SnakeGame, category: 'Games' },
   { id: 'contacts', name: 'Contacts', icon: '👤', component: Contacts, category: 'Productivity' },
   { id: 'books', name: 'Books', icon: '📚', component: BooksApp, category: 'Media' },
+  { id: 'vpn', name: 'NexVpn', icon: '🛡️', component: NexVpn, category: 'Security' },
 ];

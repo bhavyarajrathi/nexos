@@ -42,8 +42,8 @@ const Browser: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-white/10">
+    <div className="flex flex-col h-full bg-zinc-950">
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-white/10 bg-gradient-to-r from-zinc-900 to-zinc-800">
         <button onClick={goBack} className="p-1.5 rounded hover:bg-white/10" disabled={histIdx <= 0}>
           <ArrowLeft className="w-3.5 h-3.5" />
         </button>
@@ -60,6 +60,7 @@ const Browser: React.FC = () => {
               className="flex-1 bg-transparent text-[11px] outline-none" />
           </div>
         </form>
+        <span className="px-2 py-0.5 rounded text-[10px] border border-white/10 bg-white/5">Chrome</span>
       </div>
       <div className="flex gap-1.5 px-3 py-1 border-b border-white/5">
         {bookmarks.map(b => (
@@ -71,7 +72,7 @@ const Browser: React.FC = () => {
       </div>
       <div className="flex-1 bg-white">
         <iframe src={url} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms"
-          title="Browser" />
+          title="Chrome Browser" />
       </div>
     </div>
   );

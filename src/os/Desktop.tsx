@@ -11,7 +11,8 @@ const iconStyles: Record<string, { bg: string; shadow: string }> = {
   terminal: { bg: 'linear-gradient(135deg, #1a1a2e, #0f0f23)', shadow: '0 4px 12px rgba(0,0,0,0.4)' },
   files: { bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', shadow: '0 4px 12px rgba(59,130,246,0.3)' },
   settings: { bg: 'linear-gradient(135deg, #6b7280, #4b5563)', shadow: '0 4px 12px rgba(107,114,128,0.3)' },
-  browser: { bg: 'linear-gradient(135deg, #06b6d4, #0891b2)', shadow: '0 4px 12px rgba(6,182,212,0.3)' },
+  browser: { bg: 'linear-gradient(135deg, #22c55e, #eab308)', shadow: '0 4px 12px rgba(34,197,94,0.32)' },
+  sailor: { bg: 'linear-gradient(135deg, #0ea5e9, #1d4ed8)', shadow: '0 4px 12px rgba(14,165,233,0.34)' },
   weather: { bg: 'linear-gradient(135deg, #38bdf8, #0ea5e9)', shadow: '0 4px 12px rgba(56,189,248,0.3)' },
   music: { bg: 'linear-gradient(135deg, #ec4899, #db2777)', shadow: '0 4px 12px rgba(236,72,153,0.3)' },
   camera: { bg: 'linear-gradient(135deg, #6366f1, #4f46e5)', shadow: '0 4px 12px rgba(99,102,241,0.3)' },
@@ -29,6 +30,7 @@ const iconStyles: Record<string, { bg: string; shadow: string }> = {
   snake: { bg: 'linear-gradient(135deg, #84cc16, #65a30d)', shadow: '0 4px 12px rgba(132,204,22,0.3)' },
   contacts: { bg: 'linear-gradient(135deg, #f97316, #c2410c)', shadow: '0 4px 12px rgba(249,115,22,0.3)' },
   books: { bg: 'linear-gradient(135deg, #f59e0b, #b45309)', shadow: '0 4px 12px rgba(245,158,11,0.3)' },
+  vpn: { bg: 'linear-gradient(135deg, #0ea5e9, #7c3aed)', shadow: '0 4px 12px rgba(14,165,233,0.32)' },
 };
 
 interface Notification {

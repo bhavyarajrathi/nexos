@@ -1,55 +1,86 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useOS } from './OSContext';
-import { Shield } from 'lucide-react';
 
-const bootMessages = [
-  'Initializing kernel...',
-  'Loading security modules...',
-  'Mounting encrypted filesystem...',
-  'Starting neural interface...',
-  'Verifying system integrity...',
-  'Loading drivers...',
-  'Establishing secure connection...',
-  'Initializing AI subsystem...',
-  'System ready.',
+const bootStates = [
+  'Loading',
+  'Ultra-Light',
+  'Cross-Compatible',
+  'Secure',
+  'AI-Driven',
 ];
+
+const bootDurationMs = 8000;
 
 const BootScreen: React.FC = () => {
   const { finishBoot } = useOS();
-  const [progress, setProgress] = useState(0);
-  const [msgIndex, setMsgIndex] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [statusIndex, setStatusIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setTimeout(finishBoot, 400);
-          return 100;
+    const statusTimer = window.setInterval(() => {
+      setStatusIndex(index => Math.min(index + 1, bootStates.length - 1));
+    }, 1000);
+
+    const completionTimer = window.setTimeout(async () => {
+      const audio = audioRef.current;
+
+      if (audio) {
+        audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = 0.25;
+
+        try {
+          await audio.play();
+        } catch {
+          // Browsers may block autoplay; the boot animation still completes.
         }
-        return p + 2;
-      });
-      setMsgIndex(i => Math.min(i + 1, bootMessages.length - 1));
-    }, 120);
-    return () => clearInterval(interval);
+      }
+
+      finishBoot();
+    }, bootDurationMs);
+
+    return () => {
+      window.clearInterval(statusTimer);
+      window.clearTimeout(completionTimer);
+    };
   }, [finishBoot]);
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[9999] select-none">
-      <div className="flex items-center gap-3 mb-8 animate-pulse">
-        <Shield className="w-12 h-12 text-cyan-400" />
-        <span className="text-3xl font-bold tracking-widest text-cyan-400" style={{ fontFamily: 'monospace' }}>
-          NexOS
-        </span>
+    <div className="boot-screen-shell fixed inset-0 z-[9999] select-none overflow-hidden">
+      <div className="boot-screen-scene">
+        <div className="boot-logo">
+          <img src="/boot/nexos-logo.png" alt="NexOS logo" />
+        </div>
       </div>
-      <div className="w-80 h-1 bg-gray-800 rounded-full overflow-hidden mb-4">
-        <div
-          className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-100 rounded-full"
-          style={{ width: `${progress}%` }}
+
+      <div className="boot-ui">
+        <div className="boot-copy">
+          <div className="boot-label">NexOS System Boot</div>
+          <div className="boot-status" key={statusIndex} aria-live="polite">
+            {bootStates[statusIndex]}
+          </div>
+        </div>
+
+        <audio
+          ref={audioRef}
+          src="/boot/boot-complete.mp3"
+          preload="auto"
+          playsInline
+          muted
         />
+
+        <div className="boot-loader-wrap">
+          <div className="boot-loader-track">
+            <div className="boot-loader-fill" />
+            <div className="boot-loader-shine" />
+          </div>
+          <div className="boot-loader-meta">
+            <span className="boot-loader-meta__booting">Booting</span>
+          </div>
+        </div>
+
+        <p className="boot-footer">v3.0.0 — Secure Boot Enabled</p>
       </div>
-      <p className="text-cyan-300/70 text-xs font-mono h-4">{bootMessages[msgIndex]}</p>
-      <p className="text-gray-600 text-xs mt-8 font-mono">v3.0.0 — Secure Boot Enabled</p>
     </div>
   );
 };

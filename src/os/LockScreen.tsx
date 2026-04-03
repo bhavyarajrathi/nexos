@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOS } from './OSContext';
-import { Shield, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, Sparkles, Cpu, ShieldCheck } from 'lucide-react';
 
 const LockScreen: React.FC = () => {
   const { unlock, failedAttempts } = useOS();
@@ -34,60 +34,102 @@ const LockScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center select-none"
-      style={{ background: 'linear-gradient(135deg, #0c0d13 0%, #1a1a2e 50%, #16213e 100%)' }}>
-      <div className="absolute inset-0 backdrop-blur-sm" />
-      <div className="relative z-10 flex flex-col items-center gap-6">
-        <p className="text-white/60 text-sm font-mono">
-          {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-        <p className="text-white text-6xl font-light tracking-wide">
-          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-        </p>
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md">
-            <Shield className="w-8 h-8 text-cyan-400" />
+    <div className="auth-screen-shell fixed inset-0 z-[9998] select-none overflow-hidden">
+      <div className="auth-screen-grid">
+        <section className="auth-hero">
+          <div className="auth-brand-mark">
+            <img src="/boot/nexos-logo.png" alt="NexOS logo" />
           </div>
-          <p className="text-white/80 text-sm">NexOS</p>
-        </div>
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col items-center gap-3">
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-            <input
-              type={showPin ? 'text' : 'password'}
-              value={pin}
-              onChange={e => setPin(e.target.value)}
-              placeholder="Enter password"
-              disabled={locked}
-              className={`w-64 h-10 pl-9 pr-10 rounded-lg bg-white/10 border text-white text-sm placeholder:text-white/30 outline-none backdrop-blur-md transition-all ${
-                error ? 'border-red-500 animate-shake' : 'border-white/20 focus:border-cyan-400/50'
-              }`}
-              autoFocus
-            />
-            <button type="button" onClick={() => setShowPin(!showPin)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60">
-              {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <div className="auth-hero-copy">
+            <p className="auth-kicker">AI-driven desktop environment</p>
+            <h1 className="auth-title">Welcome back.</h1>
+            <p className="auth-description">
+              Secure access, adaptive workflows, and a workspace designed to feel intelligent rather than decorative.
+            </p>
+          </div>
+
+          <div className="auth-feature-list">
+            <div className="auth-feature-item">
+              <Sparkles className="w-4 h-4" />
+              <span>Predictive assistance</span>
+            </div>
+            <div className="auth-feature-item">
+              <Cpu className="w-4 h-4" />
+              <span>Context-aware system state</span>
+            </div>
+            <div className="auth-feature-item">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Encrypted session resume</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="auth-panel" aria-label="Unlock NexOS">
+          <div className="auth-panel-topline">
+            <div>
+              <p className="auth-panel-label">NexOS Access</p>
+              <p className="auth-panel-time">
+                {time.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+            <div className="auth-time-badge">
+              {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+            </div>
+          </div>
+
+          <div className="auth-identity">
+            <div className="auth-identity-avatar">
+              <Shield className="w-7 h-7 text-violet-200" />
+            </div>
+            <div>
+              <p className="auth-identity-name">NexOS Secure Session</p>
+              <p className="auth-identity-subtitle">AI-assisted workspace authentication</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-input-shell">
+              <Lock className="auth-input-icon" />
+              <input
+                type={showPin ? 'text' : 'password'}
+                value={pin}
+                onChange={e => setPin(e.target.value)}
+                placeholder="Enter password"
+                disabled={locked}
+                className={`auth-input ${error ? 'auth-input--error' : ''}`}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                className="auth-visibility-toggle"
+                aria-label={showPin ? 'Hide password' : 'Show password'}
+              >
+                {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </label>
+
+            {error && (
+              <p className="auth-feedback auth-feedback--error">
+                <AlertTriangle className="w-3.5 h-3.5" /> Incorrect password
+              </p>
+            )}
+            {locked && (
+              <p className="auth-feedback auth-feedback--warning">
+                <AlertTriangle className="w-3.5 h-3.5" /> Too many attempts. Wait 30s.
+              </p>
+            )}
+            {failedAttempts > 0 && failedAttempts < 5 && !error && (
+              <p className="auth-feedback auth-feedback--muted">{5 - failedAttempts} attempts remaining</p>
+            )}
+
+            <button type="submit" disabled={locked || !pin} className="auth-submit">
+              Unlock NexOS
             </button>
-          </div>
-          {error && (
-            <p className="text-red-400 text-xs flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Incorrect password
-            </p>
-          )}
-          {locked && (
-            <p className="text-yellow-400 text-xs flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Too many attempts. Wait 30s.
-            </p>
-          )}
-          {failedAttempts > 0 && failedAttempts < 5 && !error && (
-            <p className="text-yellow-400/60 text-xs">{5 - failedAttempts} attempts remaining</p>
-          )}
-          <button type="submit" disabled={locked || !pin}
-            className="w-64 h-9 rounded-lg bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-sm hover:bg-cyan-500/30 transition-all disabled:opacity-40">
-            Unlock
-          </button>
-        </form>
-        <p className="text-white/20 text-xs mt-8 font-mono">Default password: 1234</p>
+          </form>
+
+          <p className="auth-footnote">Default password: 1234</p>
+        </section>
       </div>
     </div>
   );
