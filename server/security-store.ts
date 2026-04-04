@@ -37,20 +37,26 @@ export type LoginResult =
       message: string;
     };
 
-type PersistedSecurityState = {
+type UserSecurityState = {
+  username: string;
   passwordHash: string;
   failedAttempts: number;
   lockUntil: number;
   updatedAt: number;
 };
 
+type PersistedSecurityState = {
+  users: Record<string, UserSecurityState>;
+};
+
 type SessionRecord = {
   sessionId: string;
+  username: string;
   expiresAt: number;
 };
 
 const DATA_DIR = path.resolve(process.cwd(), 'server', 'data');
-const STATE_FILE = path.join(DATA_DIR, 'security-state.json');
+const USERS_STATE_FILE = path.join(DATA_DIR, 'users-state.json');
 const LOG_FILE = path.join(DATA_DIR, 'security-logs.json');
 const SESSION_COOKIE_NAME = 'nexos_session';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -59,12 +65,21 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 30 * 1000;
 
 const createDefaultState = async (): Promise<PersistedSecurityState> => {
-  const defaultPassword = process.env.NEXOS_INITIAL_PASSWORD || 'NexOS-Admin-2026!';
+  const defaultPassword = process.env.NEXOS_INITIAL_PASSWORD;
+  if (!defaultPassword) {
+    throw new Error('NEXOS_INITIAL_PASSWORD is required for first-time security initialization');
+  }
+  const defaultUsername = 'admin';
   return {
-    passwordHash: await bcrypt.hash(defaultPassword, PASSWORD_COST),
-    failedAttempts: 0,
-    lockUntil: 0,
-    updatedAt: Date.now(),
+    users: {
+      [defaultUsername]: {
+        username: defaultUsername,
+        passwordHash: await bcrypt.hash(defaultPassword, PASSWORD_COST),
+        failedAttempts: 0,
+        lockUntil: 0,
+        updatedAt: Date.now(),
+      },
+    },
   };
 };
 
@@ -93,17 +108,21 @@ export class SecurityStore {
   async initialize() {
     await ensureDataDir();
 
-    const fallbackState = await createDefaultState();
-    this.state = await readJson<PersistedSecurityState>(STATE_FILE, fallbackState);
+    const existingState = await readJson<PersistedSecurityState | null>(USERS_STATE_FILE, null);
+    if (existingState && Object.keys(existingState.users ?? {}).length > 0) {
+      this.state = existingState;
+    } else {
+      this.state = await createDefaultState();
+      await this.persistState();
+    }
     this.logs = await readJson<SecurityLogEntry[]>(LOG_FILE, []);
 
-    await this.persistState();
     await this.persistLogs();
   }
 
   private async persistState() {
     if (!this.state) return;
-    await writeJson(STATE_FILE, this.state);
+    await writeJson(USERS_STATE_FILE, this.state);
   }
 
   private async persistLogs() {
@@ -148,13 +167,23 @@ export class SecurityStore {
     const now = Date.now();
     const session = sessionId ? this.sessions.get(sessionId) : undefined;
     const authenticated = Boolean(session && session.expiresAt > now);
-    const remainingLockMs = state.lockUntil > now ? state.lockUntil - now : 0;
+    
+    if (authenticated && session) {
+      const userState = state.users[session.username];
+      const remainingLockMs = userState && userState.lockUntil > now ? userState.lockUntil - now : 0;
+      return {
+        authenticated,
+        failedAttempts: userState?.failedAttempts || 0,
+        lockUntil: userState?.lockUntil || 0,
+        remainingLockMs,
+      };
+    }
 
     return {
-      authenticated,
-      failedAttempts: state.failedAttempts,
-      lockUntil: state.lockUntil,
-      remainingLockMs,
+      authenticated: false,
+      failedAttempts: 0,
+      lockUntil: 0,
+      remainingLockMs: 0,
     };
   }
 
@@ -166,36 +195,67 @@ export class SecurityStore {
     return Boolean(session && session.expiresAt > now);
   }
 
-  async login(password: string): Promise<LoginResult> {
+  getUsername(sessionId?: string): string | null {
+    const now = Date.now();
+    if (!sessionId) return null;
+    this.pruneExpiredSessions(now);
+    const session = this.sessions.get(sessionId);
+    if (session && session.expiresAt > now) {
+      return session.username;
+    }
+    return null;
+  }
+
+  async login(username: string, password: string): Promise<LoginResult> {
     const state = this.ensureState();
     const now = Date.now();
     this.pruneExpiredSessions(now);
 
-    if (state.lockUntil > now) {
+    const userState = state.users[username];
+    if (!userState) {
+      await this.appendLog('FAILED_LOGIN', `Login attempt for non-existent user: ${username}`);
+      return {
+        authenticated: false,
+        locked: false,
+        failedAttempts: 0,
+        lockUntil: 0,
+        remainingLockMs: 0,
+        message: 'Invalid username or password',
+      };
+    }
+
+    if (userState.lockUntil > now) {
       const result: LoginResult = {
         authenticated: false,
         locked: true,
-        failedAttempts: state.failedAttempts,
-        lockUntil: state.lockUntil,
-        remainingLockMs: state.lockUntil - now,
+        failedAttempts: userState.failedAttempts,
+        lockUntil: userState.lockUntil,
+        remainingLockMs: userState.lockUntil - now,
         message: 'Login temporarily locked due to too many attempts.',
       };
-      await this.appendLog('LOCKOUT_ACTIVE', 'Login blocked because lockout is active');
+      await this.appendLog('LOCKOUT_ACTIVE', `Login blocked for user ${username} because lockout is active`);
       return result;
     }
 
-    const valid = await bcrypt.compare(password, state.passwordHash);
+    const valid = await bcrypt.compare(password, userState.passwordHash);
     if (valid) {
       const sessionId = crypto.randomUUID();
-      this.sessions.set(sessionId, { sessionId, expiresAt: now + SESSION_TTL_MS });
+      this.sessions.set(sessionId, { sessionId, username, expiresAt: now + SESSION_TTL_MS });
+      
       this.state = {
-        ...state,
-        failedAttempts: 0,
-        lockUntil: 0,
-        updatedAt: now,
+        users: {
+          ...state.users,
+          [username]: {
+            ...userState,
+            failedAttempts: 0,
+            lockUntil: 0,
+            updatedAt: now,
+          },
+        },
       };
+      
       await this.persistState();
-      await this.appendLog('LOGIN', 'Successful login');
+      await this.appendLog('LOGIN', `Successful login for user ${username}`);
 
       return {
         authenticated: true,
@@ -209,23 +269,29 @@ export class SecurityStore {
       };
     }
 
-    const failedAttempts = state.failedAttempts + 1;
+    const failedAttempts = userState.failedAttempts + 1;
     const locked = failedAttempts >= MAX_FAILED_ATTEMPTS;
     this.state = {
-      ...state,
-      failedAttempts: locked ? MAX_FAILED_ATTEMPTS : failedAttempts,
-      lockUntil: locked ? now + LOCKOUT_DURATION_MS : state.lockUntil,
-      updatedAt: now,
+      users: {
+        ...state.users,
+        [username]: {
+          ...userState,
+          failedAttempts: locked ? MAX_FAILED_ATTEMPTS : failedAttempts,
+          lockUntil: locked ? now + LOCKOUT_DURATION_MS : userState.lockUntil,
+          updatedAt: now,
+        },
+      },
     };
+    
     await this.persistState();
-    await this.appendLog(locked ? 'LOCKOUT' : 'FAILED_LOGIN', locked ? 'Too many failed attempts. Login temporarily locked.' : `Failed login attempt #${failedAttempts}`);
+    await this.appendLog(locked ? 'LOCKOUT' : 'FAILED_LOGIN', locked ? `Too many failed attempts for user ${username}. Login temporarily locked.` : `Failed login attempt #${failedAttempts} for user ${username}`);
 
     return {
       authenticated: false,
       locked,
-      failedAttempts: this.state.failedAttempts,
-      lockUntil: this.state.lockUntil,
-      remainingLockMs: this.state.lockUntil > now ? this.state.lockUntil - now : 0,
+      failedAttempts: this.state.users[username].failedAttempts,
+      lockUntil: this.state.users[username].lockUntil,
+      remainingLockMs: this.state.users[username].lockUntil > now ? this.state.users[username].lockUntil - now : 0,
       message: locked ? 'Too many failed attempts. Login temporarily locked.' : 'Incorrect password',
     };
   }
@@ -237,19 +303,31 @@ export class SecurityStore {
     return this.appendLog('LOCK', 'System locked');
   }
 
-  async changePassword(newPassword: string) {
+  async changePassword(username: string, newPassword: string) {
     const state = this.ensureState();
+    const userState = state.users[username];
+    
+    if (!userState) {
+      throw new Error(`User ${username} not found`);
+    }
+
     const now = Date.now();
     const passwordHash = await bcrypt.hash(newPassword, PASSWORD_COST);
     this.state = {
-      ...state,
-      passwordHash,
-      failedAttempts: 0,
-      lockUntil: 0,
-      updatedAt: now,
+      users: {
+        ...state.users,
+        [username]: {
+          ...userState,
+          passwordHash,
+          failedAttempts: 0,
+          lockUntil: 0,
+          updatedAt: now,
+        },
+      },
     };
+    
     await this.persistState();
-    await this.appendLog('PASSWORD_CHANGE', 'Password changed');
+    await this.appendLog('PASSWORD_CHANGE', `Password changed for user ${username}`);
     return true;
   }
 

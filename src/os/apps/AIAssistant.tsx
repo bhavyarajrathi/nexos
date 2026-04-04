@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { useOS } from '../OSContext';
 import { ChatMessage, generateAssistantReply } from '../aiEngine';
+import { AiStartupProfile } from '../types';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -9,12 +10,35 @@ interface Message {
 }
 
 const AIAssistant: React.FC = () => {
-  const { assistantContext, openApp } = useOS();
+  const {
+    assistantContext,
+    aiInsights,
+    openApp,
+    setTheme,
+    setWallpaper,
+    allThemes,
+    allWallpapers,
+    applyAutomationMode,
+    saveWorkspaceSnapshot,
+    syncUserData,
+    aiStartupProfile,
+    saveAiStartupProfile,
+    clearAiStartupProfile,
+  } = useOS();
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hello! I\'m NexOS AI, your personal assistant. I can help you with tasks, answer questions, automate app launches, and optimize the system in real time. How can I help you today?' }
+    {
+      role: 'assistant',
+      content: 'Hello! I\'m NexOS AI, your adaptive workspace assistant. Tell me your role or workflow and I can instantly personalize your desktop UI, app layout, and performance mode. Example: "I am a data analyst, optimize my workspace".',
+    }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<0 | 1 | 2 | 3>(0);
+  const [onboardingData, setOnboardingData] = useState<{
+    role?: RoleProfile;
+    priority?: 'performance' | 'balanced' | 'visual';
+    style?: 'dark' | 'light' | 'colorful' | 'minimal';
+  }>({});
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -43,6 +67,296 @@ const AIAssistant: React.FC = () => {
     notepad: 'notepad',
     maps: 'maps',
     weather: 'weather',
+    vpn: 'vpn',
+    contacts: 'contacts',
+    books: 'books',
+    sailor: 'sailor',
+    task: 'taskmanager',
+    tasks: 'taskmanager',
+  };
+
+  type RoleProfile = {
+    key: string;
+    mode: 'study' | 'coding' | 'meeting';
+    themeId: string;
+    wallpaperId: string;
+    apps: string[];
+    label: string;
+  };
+
+  const roleProfiles: RoleProfile[] = [
+    {
+      key: 'developer',
+      mode: 'coding',
+      themeId: 'graphite',
+      wallpaperId: 'w19',
+      apps: ['code', 'terminal', 'files', 'browser', 'ai', 'taskmanager'],
+      label: 'Developer Workspace',
+    },
+    {
+      key: 'data-analyst',
+      mode: 'study',
+      themeId: 'steel',
+      wallpaperId: 'w51',
+      apps: ['code', 'browser', 'terminal', 'calendar', 'todo', 'taskmanager'],
+      label: 'Data Analyst Workspace',
+    },
+    {
+      key: 'student',
+      mode: 'study',
+      themeId: 'pastel-sky',
+      wallpaperId: 'w39',
+      apps: ['notepad', 'calendar', 'todo', 'books', 'clock'],
+      label: 'Study Workspace',
+    },
+    {
+      key: 'manager',
+      mode: 'meeting',
+      themeId: 'frost',
+      wallpaperId: 'w48',
+      apps: ['calendar', 'mail', 'browser', 'notepad', 'contacts'],
+      label: 'Meeting Workspace',
+    },
+    {
+      key: 'creative',
+      mode: 'study',
+      themeId: 'vaporwave',
+      wallpaperId: 'w35',
+      apps: ['paint', 'photos', 'music', 'browser', 'files'],
+      label: 'Creative Workspace',
+    },
+  ];
+
+  const findThemeByPrompt = (text: string) => {
+    const lower = text.toLowerCase();
+    return allThemes.find(theme => lower.includes(theme.name.toLowerCase()) || lower.includes(theme.id.toLowerCase()));
+  };
+
+  const findWallpaperByPrompt = (text: string) => {
+    const lower = text.toLowerCase();
+    return allWallpapers.find(wallpaper => lower.includes(wallpaper.name.toLowerCase()) || lower.includes(wallpaper.id.toLowerCase()));
+  };
+
+  const getRoleProfileFromPrompt = (text: string): RoleProfile | null => {
+    const lower = text.toLowerCase();
+    if (/(developer|programmer|coding|full\s*stack|frontend|backend)/i.test(lower)) {
+      return roleProfiles.find(profile => profile.key === 'developer') ?? null;
+    }
+    if (/(data\s*analyst|analytics|sql|dashboard|bi\b|excel|power\s*bi)/i.test(lower)) {
+      return roleProfiles.find(profile => profile.key === 'data-analyst') ?? null;
+    }
+    if (/(student|study|learning|exam|class|college)/i.test(lower)) {
+      return roleProfiles.find(profile => profile.key === 'student') ?? null;
+    }
+    if (/(manager|meeting|founder|business|sales|operations)/i.test(lower)) {
+      return roleProfiles.find(profile => profile.key === 'manager') ?? null;
+    }
+    if (/(designer|creative|artist|content|video\s*editor|ui\s*ux)/i.test(lower)) {
+      return roleProfiles.find(profile => profile.key === 'creative') ?? null;
+    }
+    return null;
+  };
+
+  const applyRoleProfile = async (profile: RoleProfile) => {
+    applyAutomationMode(profile.mode);
+    setTheme(profile.themeId);
+    setWallpaper(profile.wallpaperId);
+    profile.apps.forEach(appId => openApp(appId));
+    saveWorkspaceSnapshot(`${profile.label} - AI`);
+    await syncUserData();
+  };
+
+  const parsePriority = (text: string): 'performance' | 'balanced' | 'visual' | null => {
+    const lower = text.toLowerCase();
+    if (/(performance|speed|fast|responsive|optimi)/i.test(lower)) return 'performance';
+    if (/(visual|style|looks|beautiful|design|creative)/i.test(lower)) return 'visual';
+    if (/(balanced|balance|normal|default)/i.test(lower)) return 'balanced';
+    return null;
+  };
+
+  const parseStyle = (text: string): 'dark' | 'light' | 'colorful' | 'minimal' | null => {
+    const lower = text.toLowerCase();
+    if (/(dark|night|black|graphite|midnight)/i.test(lower)) return 'dark';
+    if (/(light|bright|clean\s*light|frost|ice)/i.test(lower)) return 'light';
+    if (/(colorful|vibrant|neon|creative|bold)/i.test(lower)) return 'colorful';
+    if (/(minimal|simple|focus|calm)/i.test(lower)) return 'minimal';
+    return null;
+  };
+
+  const tuneThemeForStyle = (baseThemeId: string, style: 'dark' | 'light' | 'colorful' | 'minimal') => {
+    if (style === 'dark') return ['graphite', 'midnight', 'dark'].find(id => allThemes.some(theme => theme.id === id)) ?? baseThemeId;
+    if (style === 'light') return ['frost', 'ice', 'pastel-sky'].find(id => allThemes.some(theme => theme.id === id)) ?? baseThemeId;
+    if (style === 'colorful') return ['cyberpunk', 'vaporwave', 'sunset'].find(id => allThemes.some(theme => theme.id === id)) ?? baseThemeId;
+    return ['steel', 'slate', 'frost'].find(id => allThemes.some(theme => theme.id === id)) ?? baseThemeId;
+  };
+
+  const tuneWallpaperForStyle = (baseWallpaperId: string, style: 'dark' | 'light' | 'colorful' | 'minimal') => {
+    if (style === 'dark') return ['w26', 'w25', 'w50'].find(id => allWallpapers.some(wallpaper => wallpaper.id === id)) ?? baseWallpaperId;
+    if (style === 'light') return ['w51', 'w48', 'w39'].find(id => allWallpapers.some(wallpaper => wallpaper.id === id)) ?? baseWallpaperId;
+    if (style === 'colorful') return ['w47', 'w35', 'w12'].find(id => allWallpapers.some(wallpaper => wallpaper.id === id)) ?? baseWallpaperId;
+    return ['w39', 'w50', 'w1'].find(id => allWallpapers.some(wallpaper => wallpaper.id === id)) ?? baseWallpaperId;
+  };
+
+  const buildStartupProfile = (
+    role: RoleProfile,
+    priority: 'performance' | 'balanced' | 'visual',
+    style: 'dark' | 'light' | 'colorful' | 'minimal'
+  ): AiStartupProfile => {
+    const mode = priority === 'performance' ? 'coding' : priority === 'visual' ? role.mode : role.mode;
+    const themeId = tuneThemeForStyle(role.themeId, style);
+    const wallpaperId = tuneWallpaperForStyle(role.wallpaperId, style);
+
+    return {
+      id: crypto.randomUUID(),
+      label: `${role.label} (${priority}/${style})`,
+      role: role.key,
+      mode,
+      themeId,
+      wallpaperId,
+      apps: role.apps,
+      priority,
+      style,
+      autoApply: true,
+      createdAt: Date.now(),
+    };
+  };
+
+  const beginOnboarding = () => {
+    setOnboardingStep(1);
+    setOnboardingData({});
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: 'AI Onboarding started. Step 1/3: What is your role? (developer, data analyst, student, manager, creative)'
+    }]);
+  };
+
+  const handleOnboardingReply = async (userText: string): Promise<string | null> => {
+    if (onboardingStep === 0) return null;
+
+    if (onboardingStep === 1) {
+      const role = getRoleProfileFromPrompt(userText);
+      if (!role) {
+        return 'I did not catch that role. Please choose one: developer, data analyst, student, manager, or creative.';
+      }
+
+      setOnboardingData({ role });
+      setOnboardingStep(2);
+      return 'Great. Step 2/3: What should I prioritize? (performance, balanced, visual)';
+    }
+
+    if (onboardingStep === 2) {
+      const priority = parsePriority(userText);
+      if (!priority) {
+        return 'Please choose one priority: performance, balanced, or visual.';
+      }
+
+      setOnboardingData(prev => ({ ...prev, priority }));
+      setOnboardingStep(3);
+      return 'Perfect. Step 3/3: What UI style do you prefer? (dark, light, colorful, minimal)';
+    }
+
+    const style = parseStyle(userText);
+    if (!style) {
+      return 'Please choose one style: dark, light, colorful, or minimal.';
+    }
+
+    const role = onboardingData.role;
+    const priority = onboardingData.priority ?? 'balanced';
+    if (!role) {
+      setOnboardingStep(0);
+      setOnboardingData({});
+      return 'Onboarding reset. Please start again with "start ai onboarding".';
+    }
+
+    const startupProfile = buildStartupProfile(role, priority, style);
+    await applyRoleProfile({
+      ...role,
+      mode: startupProfile.mode,
+      themeId: startupProfile.themeId,
+      wallpaperId: startupProfile.wallpaperId,
+    });
+    saveAiStartupProfile(startupProfile);
+    setOnboardingStep(0);
+    setOnboardingData({});
+
+    return `Done. I created and saved your startup profile "${startupProfile.label}". It will auto-apply after login for a more user-friendly personalized NexOS experience.`;
+  };
+
+  const handleAICustomization = async (userMsg: string): Promise<string | null> => {
+    const lower = userMsg.toLowerCase();
+    if (/(start|begin|setup)\s+(ai\s*)?(onboarding|profile)/i.test(lower)) {
+      beginOnboarding();
+      return null;
+    }
+
+    if (/(clear|remove|disable)\s+(ai\s*)?(startup|profile|onboarding)/i.test(lower)) {
+      clearAiStartupProfile();
+      return 'Cleared your AI startup profile. Auto-apply is now disabled.';
+    }
+
+    const roleProfile = getRoleProfileFromPrompt(userMsg);
+
+    if (roleProfile && /(optimi|personal|adapt|setup|configure|workspace|ui|desktop)/i.test(lower)) {
+      await applyRoleProfile(roleProfile);
+      if (/(default|startup|login|always)/i.test(lower)) {
+        const startupProfile = buildStartupProfile(roleProfile, 'balanced', 'minimal');
+        saveAiStartupProfile(startupProfile);
+        return `Applied ${roleProfile.label} and saved it as your startup AI profile. NexOS will auto-personalize on login.`;
+      }
+      return `Applied ${roleProfile.label}. I tuned your UI, wallpaper, app layout, and flow for your role. You can say "save this as my default" to auto-apply after login.`;
+    }
+
+    if (/(performance|fast|speed|lightweight|lag)/i.test(lower)) {
+      applyAutomationMode('coding');
+      setTheme('graphite');
+      setWallpaper('w26');
+      openApp('taskmanager');
+      await syncUserData();
+      return 'Switched to Performance Workspace: lower visual noise, coding layout, and task manager opened for live monitoring.';
+    }
+
+    if (/(focus|minimal|clean|deep\s*work|distraction)/i.test(lower)) {
+      applyAutomationMode('study');
+      setTheme('frost');
+      setWallpaper('w50');
+      await syncUserData();
+      return 'Focus Workspace is active: clean visual style and study-oriented layout for distraction-free work.';
+    }
+
+    if (/(collaborat|team|calls|sync|meeting)/i.test(lower) && /(mode|layout|workspace|optimi|setup)/i.test(lower)) {
+      applyAutomationMode('meeting');
+      setTheme('ice');
+      setWallpaper('w48');
+      openApp('mail');
+      openApp('calendar');
+      await syncUserData();
+      return 'Meeting Workspace activated with communication-first layout and collaboration apps ready.';
+    }
+
+    const themeMatch = findThemeByPrompt(userMsg);
+    if (themeMatch && /(theme|look|color|style|ui)/i.test(lower)) {
+      setTheme(themeMatch.id);
+      await syncUserData();
+      return `Applied theme ${themeMatch.name}.`;
+    }
+
+    const wallpaperMatch = findWallpaperByPrompt(userMsg);
+    if (wallpaperMatch && /(wallpaper|background|wall)/i.test(lower)) {
+      setWallpaper(wallpaperMatch.id);
+      await syncUserData();
+      return `Applied wallpaper ${wallpaperMatch.name}.`;
+    }
+
+    if (/(save|snapshot|remember|default\s*workspace)/i.test(lower)) {
+      const snapshotId = saveWorkspaceSnapshot('AI Personalized Workspace');
+      const roleProfile = getRoleProfileFromPrompt(userMsg) ?? roleProfiles[0];
+      const startupProfile = buildStartupProfile(roleProfile, 'balanced', 'minimal');
+      saveAiStartupProfile(startupProfile);
+      await syncUserData();
+      return `Saved your current desktop as AI Personalized Workspace (${snapshotId.slice(0, 8)}), and set AI startup auto-apply.`;
+    }
+
+    return null;
   };
 
   const resolveLaunchTarget = (text: string) => {
@@ -63,7 +377,7 @@ const AIAssistant: React.FC = () => {
     }
 
     if (lower.includes('theme') && (lower.includes('create') || lower.includes('generate') || lower.includes('make'))) {
-      return `🎨 I've designed a custom theme based on your request! Here's a preview:\n\n• **Primary**: A dynamic accent color\n• **Background**: Rich dark tone\n• **Text**: High contrast for readability\n\nTo apply custom themes, go to Settings > Themes and look for the closest match. In a future update, I'll be able to directly apply AI-generated themes!`;
+      return `I can apply a style directly now. Try prompts like "set graphite theme", "use frost theme", or "apply a creative UI setup".`;
     }
     if (lower.includes('icon') && (lower.includes('create') || lower.includes('generate'))) {
       return `🖼️ I can help design icon concepts! Here's what I recommend:\n\n• **Style**: Minimalist line icons with gradient fills\n• **Color**: Match your current theme accent\n• **Size**: 48x48px for desktop, 24x24px for taskbar\n\nDescribe the specific icon you'd like and I'll suggest the perfect design!`;
@@ -76,6 +390,12 @@ const AIAssistant: React.FC = () => {
     }
     if (lower.includes('help') || lower.includes('what can')) {
       return `I can help with:\n\n• 🎨 **Theme Generation** - "Create a sunset theme"\n• 🖼️ **Icon Design** - "Generate a music icon"\n• ⚙️ **Settings** - "Change my wallpaper"\n• 🔒 **Security** - "Check security status"\n• 📝 **Tasks** - "Remind me to..."\n• 🧮 **Calculations** - "What's 15% of 200?"\n• 🌍 **Info** - "What time is it in Tokyo?"\n\nJust ask away!`;
+    }
+    if (lower.includes('optimize') || lower.includes('workspace') || lower.includes('role')) {
+      return `Try one of these prompts:\n\n• "I am a developer, optimize my workspace"\n• "I am a data analyst, adapt the UI"\n• "Switch to focus mode"\n• "Enable meeting workspace"\n• "Save this as my default workspace"`;
+    }
+    if (lower.includes('onboarding') || lower.includes('profile')) {
+      return `Use "start ai onboarding" and I will ask 3 quick questions to build a startup profile that auto-applies when you log in.`;
     }
     if (lower.includes('time')) {
       const now = new Date();
@@ -113,6 +433,18 @@ const AIAssistant: React.FC = () => {
     setLoading(true);
 
     try {
+      const onboardingReply = await handleOnboardingReply(userText);
+      if (onboardingReply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: onboardingReply }]);
+        return;
+      }
+
+      const customizationReply = await handleAICustomization(userText);
+      if (customizationReply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: customizationReply }]);
+        return;
+      }
+
       const launchTarget = resolveLaunchTarget(userText);
       if (launchTarget) {
         openApp(launchTarget);
@@ -141,6 +473,41 @@ const AIAssistant: React.FC = () => {
         </div>
         <span className="text-xs font-medium">NexOS AI Assistant</span>
         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">Local AI</span>
+      </div>
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.02]">
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            'I am a developer, optimize my workspace',
+            'I am a data analyst, adapt the UI',
+            'Switch to focus mode',
+            'Enable meeting workspace',
+            'Start AI onboarding',
+          ].map(prompt => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => setInput(prompt)}
+              className="text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[10px] opacity-60">
+          Current mode: {aiInsights.automationMode}. Next likely app: {aiInsights.topPicks[0]?.label ?? 'N/A'}.
+        </p>
+        <p className="mt-1 text-[10px] opacity-60">
+          Startup profile: {aiStartupProfile ? `${aiStartupProfile.label} (auto-apply on)` : 'Not configured'}.
+        </p>
+        {aiStartupProfile && (
+          <button
+            type="button"
+            onClick={clearAiStartupProfile}
+            className="mt-2 text-[10px] px-2 py-1 rounded-md bg-red-500/15 hover:bg-red-500/25"
+          >
+            Clear Startup Profile
+          </button>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.map((msg, i) => (

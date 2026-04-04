@@ -119,6 +119,7 @@ Then edit `server/.env` values:
 
 - `PORT=3001`
 - `NEXOS_INITIAL_PASSWORD=ChangeThis123!`
+- `CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080`
 
 ### 3. Run Frontend and Backend
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useOS } from './OSContext';
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, Sparkles, Cpu, ShieldCheck } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, Sparkles, Cpu, ShieldCheck, User } from 'lucide-react';
 
 const LockScreen: React.FC = () => {
   const { unlock, failedAttempts } = useOS();
-  const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [time, setTime] = useState(new Date());
   const [locked, setLocked] = useState(false);
@@ -29,11 +30,11 @@ const LockScreen: React.FC = () => {
     e.preventDefault();
     if (locked) return;
     setSubmitting(true);
-    const success = await unlock(pin);
+    const success = await unlock(username, password);
     setSubmitting(false);
     if (!success) {
       setError(true);
-      setPin('');
+      setPassword('');
       setTimeout(() => setError(false), 1500);
     }
   };
@@ -94,29 +95,41 @@ const LockScreen: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <label className="auth-input-shell">
+              <User className="auth-input-icon" />
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Enter username"
+                disabled={locked}
+                className="auth-input"
+                autoFocus
+              />
+            </label>
+
+            <label className="auth-input-shell">
               <Lock className="auth-input-icon" />
               <input
-                type={showPin ? 'text' : 'password'}
-                value={pin}
-                onChange={e => setPin(e.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="Enter password"
                 disabled={locked}
                 className={`auth-input ${error ? 'auth-input--error' : ''}`}
-                autoFocus
               />
               <button
                 type="button"
-                onClick={() => setShowPin(!showPin)}
+                onClick={() => setShowPassword(!showPassword)}
                 className="auth-visibility-toggle"
-                aria-label={showPin ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </label>
 
             {error && (
               <p className="auth-feedback auth-feedback--error">
-                <AlertTriangle className="w-3.5 h-3.5" /> Incorrect password
+                <AlertTriangle className="w-3.5 h-3.5" /> Invalid username or password
               </p>
             )}
             {locked && (
@@ -128,7 +141,7 @@ const LockScreen: React.FC = () => {
               <p className="auth-feedback auth-feedback--muted">{5 - failedAttempts} attempts remaining</p>
             )}
 
-            <button type="submit" disabled={locked || submitting || !pin} className="auth-submit">
+            <button type="submit" disabled={locked || submitting || !username || !password} className="auth-submit">
               Unlock NexOS
             </button>
           </form>

@@ -43,19 +43,19 @@ const Window: React.FC<Props> = ({ window: win, children, title }) => {
         <div className="flex items-center gap-2 mr-3" onMouseDown={(e) => e.stopPropagation()}>
           <button
             onClick={(e) => { e.stopPropagation(); closeWindow(win.id); }}
-            className="w-3 h-3 rounded-full bg-[#111111] border border-white/15 hover:brightness-125"
+            className="w-3.5 h-3.5 rounded-full bg-[#111111] border border-white/15 transition-colors duration-200 ease-out hover:bg-[#ef4444]"
             aria-label="Close window"
             title="Close"
           />
           <button
             onClick={(e) => { e.stopPropagation(); minimizeWindow(win.id); }}
-            className="w-3 h-3 rounded-full bg-[#a855f7] border border-black/20 hover:brightness-110"
+            className="w-3.5 h-3.5 rounded-full bg-[#a855f7] border border-black/20 transition-colors duration-200 ease-out hover:bg-[#d8b4fe]"
             aria-label="Minimize window"
             title="Minimize"
           />
           <button
             onClick={(e) => { e.stopPropagation(); maximizeWindow(win.id); }}
-            className="w-3 h-3 rounded-full bg-[#ffffff] border border-black/25 hover:brightness-95"
+            className="w-3.5 h-3.5 rounded-full bg-[#f3f4f6] border border-black/25 transition-colors duration-200 ease-out hover:bg-[#ffffff]"
             aria-label={win.maximized ? 'Restore window' : 'Maximize window'}
             title={win.maximized ? 'Restore' : 'Maximize'}
           />

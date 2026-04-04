@@ -223,7 +223,7 @@ const SailorBrowser: React.FC = () => {
           <iframe
             src={url}
             className="w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            sandbox="allow-scripts allow-forms allow-popups"
             title="Sailor Browser"
           />
         </div>

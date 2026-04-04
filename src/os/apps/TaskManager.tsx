@@ -5,6 +5,12 @@ import { useOS } from '../OSContext';
 const TaskManager: React.FC = () => {
   const { windows, aiInsights, systemTelemetry, openApp } = useOS();
 
+  const metrics = [
+    { label: 'CPU', value: systemTelemetry.cpu, icon: Cpu, barClass: 'bg-cyan-400' },
+    { label: 'Memory', value: systemTelemetry.memory, icon: HardDrive, barClass: 'bg-purple-400' },
+    { label: 'Network', value: systemTelemetry.network, icon: Wifi, barClass: 'bg-green-400' },
+  ];
+
   const processes = useMemo(() => {
     const openProcesses = windows.map(window => {
       const activeWeight = window.minimized ? 0.45 : 1;
@@ -31,11 +37,7 @@ const TaskManager: React.FC = () => {
   return (
     <div className="p-4 space-y-4 text-xs">
       <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'CPU', value: systemTelemetry.cpu, icon: Cpu, color: 'cyan' },
-          { label: 'Memory', value: systemTelemetry.memory, icon: HardDrive, color: 'purple' },
-          { label: 'Network', value: systemTelemetry.network, icon: Wifi, color: 'green' },
-        ].map(m => (
+        {metrics.map(m => (
           <div key={m.label} className="p-3 rounded-lg bg-white/5 space-y-2">
             <div className="flex items-center gap-1.5">
               <m.icon className="w-3.5 h-3.5 opacity-60" />
@@ -43,7 +45,7 @@ const TaskManager: React.FC = () => {
             </div>
             <p className="text-lg font-light">{Math.round(m.value)}%</p>
             <div className="w-full h-1 bg-white/10 rounded-full">
-              <div className={`h-full rounded-full transition-all duration-500 bg-${m.color}-400`}
+              <div className={`h-full rounded-full transition-all duration-500 ${m.barClass}`}
                 style={{ width: `${m.value}%` }} />
             </div>
           </div>
@@ -85,8 +87,8 @@ const TaskManager: React.FC = () => {
             <span className="w-16 text-right">CPU %</span>
             <span className="w-16 text-right">MEM MB</span>
           </div>
-          {processes.map(p => (
-            <div key={p.name} className="flex items-center gap-4 py-1.5 px-2 rounded-lg hover:bg-white/5">
+          {processes.map((p, index) => (
+            <div key={`${p.name}-${index}`} className="flex items-center gap-4 py-1.5 px-2 rounded-lg hover:bg-white/5">
               <Activity className="w-3 h-3 opacity-40" />
               <span className="flex-1 font-mono">{p.name}</span>
               <span className="w-16 text-right opacity-60">{p.cpu}</span>

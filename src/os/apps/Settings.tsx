@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
 import { useOS } from '../OSContext';
-import { Palette, Image, Lock, Shield, Monitor, Bell } from 'lucide-react';
+import { Palette, Image, Lock, Shield, Monitor, Bell, Layers3, RotateCcw, Trash2, Save } from 'lucide-react';
 
-type Tab = 'themes' | 'wallpapers' | 'security' | 'display' | 'about';
+type Tab = 'themes' | 'wallpapers' | 'security' | 'snapshots' | 'display' | 'about';
 
 const Settings: React.FC = () => {
-  const { currentTheme, setTheme, allThemes, currentWallpaper, setWallpaper, allWallpapers, setPassword, lock, securityLogs } = useOS();
+  const {
+    currentTheme,
+    setTheme,
+    allThemes,
+    currentWallpaper,
+    setWallpaper,
+    allWallpapers,
+    setPassword,
+    lock,
+    securityLogs,
+    workspaceSnapshots,
+    saveWorkspaceSnapshot,
+    restoreWorkspaceSnapshot,
+    deleteWorkspaceSnapshot,
+  } = useOS();
   const [tab, setTab] = useState<Tab>('themes');
   const [newPw, setNewPw] = useState('');
   const [themeFilter, setThemeFilter] = useState('All');
   const [wallpaperFilter, setWallpaperFilter] = useState('All');
+  const [snapshotName, setSnapshotName] = useState('');
 
   const themeCategories = ['All', ...new Set(allThemes.map(t => t.category))];
   const wallpaperCategories = ['All', ...new Set(allWallpapers.map(w => w.category))];
@@ -20,6 +35,7 @@ const Settings: React.FC = () => {
     { id: 'themes', label: 'Themes', icon: <Palette className="w-4 h-4" /> },
     { id: 'wallpapers', label: 'Wallpapers', icon: <Image className="w-4 h-4" /> },
     { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
+    { id: 'snapshots', label: 'Snapshots', icon: <Layers3 className="w-4 h-4" /> },
     { id: 'display', label: 'Display', icon: <Monitor className="w-4 h-4" /> },
     { id: 'about', label: 'About', icon: <Bell className="w-4 h-4" /> },
   ];
@@ -120,6 +136,78 @@ const Settings: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+        {tab === 'snapshots' && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Workspace Snapshots</h3>
+              <p className="text-xs opacity-60 mt-1">Save the current desktop layout, open windows, theme, and wallpaper, then restore it instantly later.</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={snapshotName}
+                onChange={e => setSnapshotName(e.target.value)}
+                placeholder="Snapshot name"
+                className="flex-1 h-8 px-3 text-xs rounded-lg bg-white/5 border border-white/10 outline-none"
+              />
+              <button
+                onClick={() => {
+                  saveWorkspaceSnapshot(snapshotName);
+                  setSnapshotName('');
+                }}
+                className="px-3 h-8 text-xs rounded-lg bg-cyan-500/20 border border-cyan-400/30 hover:bg-cyan-500/30 flex items-center gap-2"
+              >
+                <Save className="w-3.5 h-3.5" />
+                Save
+              </button>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {workspaceSnapshots.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-xs opacity-50 text-center">
+                  No snapshots saved yet.
+                </div>
+              ) : (
+                workspaceSnapshots.map(snapshot => (
+                  <div key={snapshot.id} className="rounded-lg border border-white/10 bg-white/5 px-3 py-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{snapshot.name}</p>
+                        <p className="text-[10px] opacity-50">
+                          {new Date(snapshot.createdAt).toLocaleString()} · {snapshot.windows.length} window{snapshot.windows.length === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      {(() => {
+                        const themeLabel = allThemes.find(theme => theme.id === snapshot.themeId)?.name ?? snapshot.themeId;
+                        const wallpaperLabel = allWallpapers.find(wallpaper => wallpaper.id === snapshot.wallpaperId)?.name ?? snapshot.wallpaperId;
+                        return (
+                          <div className="flex flex-wrap gap-1.5 text-[10px] opacity-60">
+                            <span className="px-1.5 py-0.5 rounded bg-white/5">Theme: {themeLabel}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-white/5">Wallpaper: {wallpaperLabel}</span>
+                          </div>
+                        );
+                      })()}
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() => restoreWorkspaceSnapshot(snapshot.id)}
+                          className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-[10px] flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => deleteWorkspaceSnapshot(snapshot.id)}
+                          className="px-2 py-1 rounded-md bg-red-500/15 hover:bg-red-500/25 text-[10px] flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

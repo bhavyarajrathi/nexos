@@ -58,7 +58,7 @@ interface ContextMenuState {
 const dockPinnedIds = ['files', 'browser', 'mail', 'music', 'photos', 'terminal', 'settings', 'ai'];
 
 const Desktop: React.FC = () => {
-  const { windows, openApp, currentWallpaper, currentTheme, lock, minimizeWindow, focusWindow } = useOS();
+  const { windows, openApp, closeAllWindows, currentWallpaper, currentTheme, lock, minimizeWindow, focusWindow, applyAutomationMode } = useOS();
   const [time, setTime] = useState(new Date());
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,11 +133,12 @@ const Desktop: React.FC = () => {
         { label: 'Open File Manager', icon: '📁', action: () => openApp('files') },
         { label: 'Change Wallpaper', icon: '🖼️', action: () => openApp('settings'), divider: true },
         { label: 'Refresh Desktop', icon: '🔄', action: () => {} },
+        { label: 'Close All Apps', icon: '❌', action: () => closeAllWindows(), divider: true },
         { label: 'System Info', icon: '📊', action: () => openApp('taskmanager'), divider: true },
         { label: 'Lock Screen', icon: '🔒', action: () => lock() },
       ]
     });
-  }, [openApp, lock]);
+  }, [openApp, closeAllWindows, lock]);
 
   const handleAppContextMenu = useCallback((e: React.MouseEvent, appId: string, appName: string) => {
     e.preventDefault();
@@ -229,6 +230,17 @@ const Desktop: React.FC = () => {
           <button onClick={() => { setSearchOpen(!searchOpen); setLaunchpadOpen(false); }}
             className="h-7 w-7 flex items-center justify-center hover:bg-white/10 transition-all">
             <Search className="w-3.5 h-3.5 opacity-70" />
+          </button>
+
+          <button
+            onClick={() => closeAllWindows()}
+            className="h-7 px-2 flex items-center gap-1 hover:bg-white/10 transition-all"
+            title="Close all apps"
+          >
+            <X className="w-3.5 h-3.5 opacity-70" />
+            {windows.length > 0 && (
+              <span className="text-[10px] opacity-60">{windows.length}</span>
+            )}
           </button>
 
           <div className="text-right ml-1.5">
@@ -437,6 +449,44 @@ const Desktop: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wide opacity-50" style={{ color: currentTheme.taskbarText }}>
+                  Quick Modes
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'study', label: 'Study', detail: 'Focus', tint: 'from-emerald-400/30 to-cyan-400/30' },
+                  { id: 'coding', label: 'Coding', detail: 'Build', tint: 'from-slate-400/30 to-indigo-400/30' },
+                  { id: 'meeting', label: 'Meeting', detail: 'Sync', tint: 'from-amber-300/30 to-rose-300/30' },
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      applyAutomationMode(mode.id as 'study' | 'coding' | 'meeting');
+                      setControlOpen(false);
+                    }}
+                    className={`p-2 rounded-lg border border-white/10 bg-gradient-to-br ${mode.tint} hover:border-white/20 transition-all text-left`}
+                  >
+                    <p className="text-[10px] font-semibold" style={{ color: currentTheme.taskbarText }}>{mode.label}</p>
+                    <p className="text-[9px] opacity-50" style={{ color: currentTheme.taskbarText }}>{mode.detail}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                closeAllWindows();
+                setControlOpen(false);
+              }}
+              className="w-full p-2 rounded-lg bg-red-500/15 border border-red-400/25 hover:bg-red-500/25 transition-all flex items-center justify-between"
+            >
+              <span className="text-[11px] font-semibold" style={{ color: currentTheme.taskbarText }}>Close All Apps</span>
+              <span className="text-[10px] opacity-60" style={{ color: currentTheme.taskbarText }}>{windows.length} open</span>
+            </button>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">

@@ -42,6 +42,29 @@ export interface OSWallpaper {
   category: string;
 }
 
+export interface WorkspaceSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  themeId: string;
+  wallpaperId: string;
+  windows: OSWindow[];
+}
+
+export interface AiStartupProfile {
+  id: string;
+  label: string;
+  role: string;
+  mode: 'study' | 'coding' | 'meeting';
+  themeId: string;
+  wallpaperId: string;
+  apps: string[];
+  priority: 'performance' | 'balanced' | 'visual';
+  style: 'dark' | 'light' | 'colorful' | 'minimal';
+  autoApply: boolean;
+  createdAt: number;
+}
+
 export type SecurityLog = {
   id: string;
   timestamp: Date;

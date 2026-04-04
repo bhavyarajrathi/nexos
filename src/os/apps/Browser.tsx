@@ -71,7 +71,7 @@ const Browser: React.FC = () => {
         ))}
       </div>
       <div className="flex-1 bg-white">
-        <iframe src={url} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms"
+        <iframe src={url} className="w-full h-full border-0" sandbox="allow-scripts allow-forms allow-popups"
           title="Chrome Browser" />
       </div>
     </div>
