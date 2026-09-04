@@ -26,6 +26,11 @@ const passwordSchema = z.object({
   newPassword: z.string().min(8).regex(/[A-Za-z]/).regex(/\d/),
 });
 
+const adminRecoverySchema = z.object({
+  username: z.literal('admin'),
+  newPassword: z.string().min(8).regex(/[A-Za-z]/).regex(/\d/),
+});
+
 const logSchema = z.object({
   action: z.string().min(1).max(64),
   details: z.string().min(1).max(256),
@@ -68,6 +73,7 @@ const userDataSchema = z.object({
 });
 
 const isProduction = process.env.NODE_ENV === 'production';
+const allowAdminPasswordRecovery = process.env.ALLOW_ADMIN_PASSWORD_RECOVERY === 'true' || !isProduction;
 const envAllowedOrigins = (process.env.CORS_ORIGINS ?? '')
   .split(',')
   .map(origin => origin.trim())
@@ -206,6 +212,23 @@ app.post('/api/auth/password', requireTrustedOrigin, async (req, res) => {
 
   await store.changePassword(username, parsed.data.newPassword);
   res.json({ ok: true, message: 'Password updated' });
+});
+
+app.post('/api/auth/recover-admin-password', requireTrustedOrigin, authRateLimit, async (req, res) => {
+  if (!allowAdminPasswordRecovery) {
+    res.status(403).json({ message: 'Admin recovery is disabled' });
+    return;
+  }
+
+  const parsed = adminRecoverySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Invalid recovery payload' });
+    return;
+  }
+
+  await store.changePassword(parsed.data.username, parsed.data.newPassword);
+  await store.recordAppEvent('ADMIN_PASSWORD_RECOVERY', 'Admin password recovered via lock screen flow');
+  res.json({ ok: true, message: 'Admin password recovered' });
 });
 
 app.get('/api/security/logs', async (req, res) => {

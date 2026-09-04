@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useOS } from './OSContext';
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, Sparkles, Cpu, ShieldCheck, User } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, Sparkles, Cpu, ShieldCheck, User, KeyRound } from 'lucide-react';
 
 const LockScreen: React.FC = () => {
-  const { unlock, failedAttempts } = useOS();
+  const { unlock, recoverAdminPassword, failedAttempts } = useOS();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [recoveryPassword, setRecoveryPassword] = useState('');
+  const [recoveryConfirm, setRecoveryConfirm] = useState('');
+  const [recoveryStatus, setRecoveryStatus] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [time, setTime] = useState(new Date());
@@ -37,6 +42,34 @@ const LockScreen: React.FC = () => {
       setPassword('');
       setTimeout(() => setError(false), 1500);
     }
+  };
+
+  const handleAdminRecovery = async () => {
+    setRecoveryStatus(null);
+
+    if (username.trim().toLowerCase() !== 'admin') {
+      setRecoveryStatus('Recovery is restricted to admin account only. Set username to admin first.');
+      return;
+    }
+
+    if (recoveryPassword !== recoveryConfirm) {
+      setRecoveryStatus('Passwords do not match.');
+      return;
+    }
+
+    setRecovering(true);
+    const success = await recoverAdminPassword(recoveryPassword);
+    setRecovering(false);
+
+    if (success) {
+      setRecoveryStatus('Admin password updated. You can now log in with the new password.');
+      setPassword('');
+      setRecoveryPassword('');
+      setRecoveryConfirm('');
+      return;
+    }
+
+    setRecoveryStatus('Recovery failed. This flow may be disabled by server policy.');
   };
 
   return (
@@ -144,6 +177,56 @@ const LockScreen: React.FC = () => {
             <button type="submit" disabled={locked || submitting || !username || !password} className="auth-submit">
               Unlock NexOS
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRecoverOpen(open => !open);
+                setRecoveryStatus(null);
+              }}
+              className="w-full h-9 rounded-lg border border-amber-300/35 bg-amber-500/12 hover:bg-amber-500/20 transition-all text-[12px] font-medium text-amber-100 inline-flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              Forgot Password (Admin Recovery)
+            </button>
+
+            {recoverOpen && (
+              <div className="rounded-xl border border-red-300/20 bg-red-950/20 p-3 space-y-2">
+                <p className="text-[11px] text-red-200 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  Administrator use only. This is a high-security bypass intended only for prototype recovery scenarios.
+                </p>
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    value={recoveryPassword}
+                    onChange={e => setRecoveryPassword(e.target.value)}
+                    placeholder="New admin password"
+                    className="auth-input"
+                  />
+                  <input
+                    type="password"
+                    value={recoveryConfirm}
+                    onChange={e => setRecoveryConfirm(e.target.value)}
+                    placeholder="Confirm new admin password"
+                    className="auth-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { void handleAdminRecovery(); }}
+                    disabled={recovering || !recoveryPassword || !recoveryConfirm}
+                    className="auth-submit"
+                  >
+                    {recovering ? 'Updating...' : 'Reset Admin Password'}
+                  </button>
+                </div>
+                {recoveryStatus && (
+                  <p className={`text-[11px] ${recoveryStatus.includes('updated') ? 'text-emerald-300' : 'text-red-200'}`}>
+                    {recoveryStatus}
+                  </p>
+                )}
+              </div>
+            )}
           </form>
         </section>
       </div>

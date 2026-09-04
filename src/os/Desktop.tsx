@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOS } from './OSContext';
 import { apps } from './appRegistry';
 import Window from './Window';
-import { Search, Lock, Wifi, Volume2, Battery, Bell, Sun, Moon, BellRing, Shield, X, Bluetooth, Plane, Settings, Command } from 'lucide-react';
+import { Search, Lock, Wifi, Volume2, Battery, Bell, Sun, Moon, BellRing, Shield, X, Bluetooth, Plane, Settings, Command, LayoutGrid } from 'lucide-react';
 
 // Icon gradient map for enhanced visual icons
 const iconStyles: Record<string, { bg: string; shadow: string }> = {
@@ -58,7 +58,7 @@ interface ContextMenuState {
 const dockPinnedIds = ['files', 'browser', 'mail', 'music', 'photos', 'terminal', 'settings', 'ai'];
 
 const Desktop: React.FC = () => {
-  const { windows, openApp, closeAllWindows, currentWallpaper, currentTheme, lock, minimizeWindow, focusWindow, applyAutomationMode } = useOS();
+  const { windows, openApp, organizeWindows, closeAllWindows, currentWallpaper, currentTheme, lock, minimizeWindow, focusWindow, applyAutomationMode } = useOS();
   const [time, setTime] = useState(new Date());
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +74,7 @@ const Desktop: React.FC = () => {
   const [nightMode, setNightMode] = useState(false);
   const [launchpadOpen, setLaunchpadOpen] = useState(false);
   const [hoveredDockApp, setHoveredDockApp] = useState<string | null>(null);
+  const [closeAllConfirm, setCloseAllConfirm] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
@@ -133,12 +134,13 @@ const Desktop: React.FC = () => {
         { label: 'Open File Manager', icon: '📁', action: () => openApp('files') },
         { label: 'Change Wallpaper', icon: '🖼️', action: () => openApp('settings'), divider: true },
         { label: 'Refresh Desktop', icon: '🔄', action: () => {} },
-        { label: 'Close All Apps', icon: '❌', action: () => closeAllWindows(), divider: true },
+        { label: 'Organize Apps', icon: '🧩', action: () => organizeWindows() },
+        { label: 'Close All Apps', icon: '❌', action: () => setCloseAllConfirm(true), divider: true },
         { label: 'System Info', icon: '📊', action: () => openApp('taskmanager'), divider: true },
         { label: 'Lock Screen', icon: '🔒', action: () => lock() },
       ]
     });
-  }, [openApp, closeAllWindows, lock]);
+  }, [openApp, organizeWindows, lock]);
 
   const handleAppContextMenu = useCallback((e: React.MouseEvent, appId: string, appName: string) => {
     e.preventDefault();
@@ -167,6 +169,15 @@ const Desktop: React.FC = () => {
 
   const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   const clearNotifications = () => setNotifications([]);
+
+  const menuWidth = 220;
+  const menuHeight = contextMenu
+    ? contextMenu.items.reduce((height, item) => height + (item.divider ? 8 : 0) + 34, 12)
+    : 0;
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const clampedMenuLeft = contextMenu ? Math.max(12, Math.min(contextMenu.x, viewportWidth - menuWidth - 12)) : 0;
+  const clampedMenuTop = contextMenu ? Math.max(12, Math.min(contextMenu.y, viewportHeight - menuHeight - 12)) : 0;
 
   const renderIcon = (app: typeof apps[0], size: 'sm' | 'md' | 'lg' = 'md') => {
     const style = iconStyles[app.id] || { bg: 'linear-gradient(135deg, #6b7280, #4b5563)', shadow: '0 4px 12px rgba(0,0,0,0.3)' };
@@ -233,7 +244,15 @@ const Desktop: React.FC = () => {
           </button>
 
           <button
-            onClick={() => closeAllWindows()}
+            onClick={() => organizeWindows()}
+            className="h-7 px-2 flex items-center hover:bg-white/10 transition-all"
+            title="Organize open apps"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 opacity-70" />
+          </button>
+
+          <button
+            onClick={() => setCloseAllConfirm(true)}
             className="h-7 px-2 flex items-center gap-1 hover:bg-white/10 transition-all"
             title="Close all apps"
           >
@@ -254,7 +273,7 @@ const Desktop: React.FC = () => {
       {/* Context Menu */}
       {contextMenu && (
         <div className="fixed z-[9999] rounded-xl overflow-hidden shadow-2xl backdrop-blur-xl py-1 min-w-[200px]"
-          style={{ left: contextMenu.x, top: contextMenu.y, background: currentTheme.windowBg, border: `1px solid ${currentTheme.windowBorder}` }}>
+          style={{ left: clampedMenuLeft, top: clampedMenuTop, background: currentTheme.windowBg, border: `1px solid ${currentTheme.windowBorder}` }}>
           {contextMenu.items.map((item, i) => (
             <React.Fragment key={i}>
               {item.divider && i > 0 && <div className="h-px my-1 mx-2" style={{ background: currentTheme.windowBorder }} />}
@@ -328,7 +347,7 @@ const Desktop: React.FC = () => {
 
       {/* Launchpad (macOS style grid by category) */}
       {launchpadOpen && (
-        <div className="absolute inset-0 top-7 z-[9000] flex items-center justify-center overflow-y-auto py-8"
+        <div className="absolute inset-0 top-7 z-[9000] flex items-start justify-center overflow-y-auto pt-12 pb-16 px-4"
           onClick={e => e.stopPropagation()}>
           <div className="w-full max-w-4xl px-8">
             {/* Launchpad search */}
@@ -479,7 +498,18 @@ const Desktop: React.FC = () => {
 
             <button
               onClick={() => {
-                closeAllWindows();
+                organizeWindows();
+                setControlOpen(false);
+              }}
+              className="w-full p-2 rounded-lg bg-cyan-500/15 border border-cyan-400/25 hover:bg-cyan-500/25 transition-all flex items-center justify-between"
+            >
+              <span className="text-[11px] font-semibold" style={{ color: currentTheme.taskbarText }}>Organize Apps</span>
+              <span className="text-[10px] opacity-60" style={{ color: currentTheme.taskbarText }}>{windows.length} open</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setCloseAllConfirm(true);
                 setControlOpen(false);
               }}
               className="w-full p-2 rounded-lg bg-red-500/15 border border-red-400/25 hover:bg-red-500/25 transition-all flex items-center justify-between"
@@ -512,6 +542,39 @@ const Desktop: React.FC = () => {
               <input type="range" min={0} max={100} value={volume} onChange={e => setVolume(Number(e.target.value))}
                 className="w-full h-1 rounded-full appearance-none cursor-pointer"
                 style={{ background: `linear-gradient(to right, #22d3ee ${volume}%, rgba(255,255,255,0.1) ${volume}%)` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close All Confirmation Modal */}
+      {closeAllConfirm && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="rounded-2xl shadow-2xl backdrop-blur-xl p-6 w-96 max-w-[90vw]"
+            style={{ background: currentTheme.windowBg, border: `1px solid ${currentTheme.windowBorder}` }}>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: currentTheme.taskbarText }}>
+              Close All Applications?
+            </h3>
+            <p className="text-xs opacity-70 mb-6" style={{ color: currentTheme.taskbarText }}>
+              You are about to close {windows.length} open {windows.length === 1 ? 'application' : 'applications'}. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setCloseAllConfirm(false)}
+                className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-xs font-medium"
+                style={{ color: currentTheme.taskbarText }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  closeAllWindows();
+                  setCloseAllConfirm(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-red-500/25 border border-red-400/50 hover:bg-red-500/35 transition-all text-xs font-medium text-red-300"
+              >
+                Close All
+              </button>
             </div>
           </div>
         </div>

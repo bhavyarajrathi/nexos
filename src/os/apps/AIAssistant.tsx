@@ -14,6 +14,7 @@ const AIAssistant: React.FC = () => {
     assistantContext,
     aiInsights,
     openApp,
+    organizeWindows,
     setTheme,
     setWallpaper,
     allThemes,
@@ -161,7 +162,6 @@ const AIAssistant: React.FC = () => {
     applyAutomationMode(profile.mode);
     setTheme(profile.themeId);
     setWallpaper(profile.wallpaperId);
-    profile.apps.forEach(appId => openApp(appId));
     saveWorkspaceSnapshot(`${profile.label} - AI`);
     await syncUserData();
   };
@@ -224,10 +224,7 @@ const AIAssistant: React.FC = () => {
   const beginOnboarding = () => {
     setOnboardingStep(1);
     setOnboardingData({});
-    setMessages(prev => [...prev, {
-      role: 'assistant',
-      content: 'AI Onboarding started. Step 1/3: What is your role? (developer, data analyst, student, manager, creative)'
-    }]);
+    return 'AI Onboarding started. Step 1/3: What is your role? (developer, data analyst, student, manager, creative)';
   };
 
   const handleOnboardingReply = async (userText: string): Promise<string | null> => {
@@ -285,13 +282,18 @@ const AIAssistant: React.FC = () => {
   const handleAICustomization = async (userMsg: string): Promise<string | null> => {
     const lower = userMsg.toLowerCase();
     if (/(start|begin|setup)\s+(ai\s*)?(onboarding|profile)/i.test(lower)) {
-      beginOnboarding();
-      return null;
+      return beginOnboarding();
     }
 
     if (/(clear|remove|disable)\s+(ai\s*)?(startup|profile|onboarding)/i.test(lower)) {
       clearAiStartupProfile();
       return 'Cleared your AI startup profile. Auto-apply is now disabled.';
+    }
+
+    if (/(organize|arrange|tidy|declutter|tile)\s+(open\s+)?(apps|windows|desktop|workspace)/i.test(lower)) {
+      organizeWindows();
+      await syncUserData();
+      return 'Organized your open apps into a clean desktop layout.';
     }
 
     const roleProfile = getRoleProfileFromPrompt(userMsg);
@@ -361,6 +363,9 @@ const AIAssistant: React.FC = () => {
 
   const resolveLaunchTarget = (text: string) => {
     const lower = text.toLowerCase();
+    if (/(onboarding|startup\s*profile|profile|recovery|recover|forgot\s*password|password reset)/i.test(lower)) {
+      return null;
+    }
     const commandMatch = lower.match(/(?:open|launch|start)\s+(?:the\s+)?(.+)$/i);
     if (!commandMatch) return null;
 
@@ -468,6 +473,7 @@ const AIAssistant: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10">
+            'Organize open apps',
         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center">
           <Sparkles className="w-3 h-3 text-white" />
         </div>

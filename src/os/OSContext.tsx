@@ -17,6 +17,7 @@ interface OSContextType {
   isLocked: boolean;
   isBooting: boolean;
   unlock: (username: string, password: string) => Promise<boolean>;
+  recoverAdminPassword: (newPassword: string) => Promise<boolean>;
   lock: () => void;
   setPassword: (p: string) => Promise<boolean>;
   failedAttempts: number;
@@ -24,6 +25,7 @@ interface OSContextType {
   // Windows
   windows: OSWindow[];
   openApp: (appId: string) => void;
+  organizeWindows: () => void;
   closeAllWindows: () => void;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
@@ -148,9 +150,9 @@ export const useOS = () => {
 };
 
 export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const usageStorageKey = 'nexos.app-usage.v1';
-  const snapshotStorageKey = 'nexos.workspace-snapshots.v1';
-  const aiProfileStorageKey = 'nexos.ai-startup-profile.v1';
+  const usageStorageKey = 'nexos.app-usage.v2';
+  const snapshotStorageKey = 'nexos.workspace-snapshots.v2';
+  const aiProfileStorageKey = 'nexos.ai-startup-profile.v2';
   const lastActivityRef = useRef(Date.now());
   const [isBooting, setIsBooting] = useState(true);
   const [isLocked, setIsLocked] = useState(true);
@@ -345,6 +347,28 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       return false;
     }
   }, [addSecurityLog, refreshSecurityLogs]);
+
+  const recoverAdminPassword = useCallback(async (newPassword: string) => {
+    const trimmed = newPassword.trim();
+    const strongEnough = trimmed.length >= 8 && /[A-Za-z]/.test(trimmed) && /\d/.test(trimmed);
+    if (!strongEnough) {
+      addSecurityLog('ADMIN_RECOVERY_REJECTED', 'Recovery password too weak');
+      return false;
+    }
+
+    try {
+      await fetchApi<ApiMessageResponse>('/auth/recover-admin-password', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', newPassword: trimmed }),
+      });
+      addSecurityLog('ADMIN_RECOVERY', 'Admin password recovered from lock screen');
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Admin recovery failed';
+      addSecurityLog('ADMIN_RECOVERY_FAILED', message);
+      return false;
+    }
+  }, [addSecurityLog]);
 
   useEffect(() => {
     void syncSecurityState();
@@ -568,13 +592,41 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   }, [isLocked, aiStartupProfile, applyAiStartupWorkspace]);
 
   const openApp = useCallback((appId: string) => {
-    const z = ++zIndexCounter.current;
-    const id = `${appId}-${Date.now()}`;
-    recordAppUsage(appId);
-    setWindows(prev => [...prev, {
-      id, appId, title: appId, x: 80 + (prev.length * 30) % 200, y: 40 + (prev.length * 30) % 150,
-      width: 700, height: 450, minimized: false, maximized: false, zIndex: z, icon: ''
-    }]);
+    let reusedExistingWindow = false;
+    setWindows(prev => {
+      const existing = prev.find(window => window.appId === appId);
+      if (existing) {
+        reusedExistingWindow = true;
+        const z = ++zIndexCounter.current;
+        return prev.map(window => window.id === existing.id
+          ? { ...window, minimized: false, zIndex: z }
+          : window
+        );
+      }
+
+      const z = ++zIndexCounter.current;
+      const id = `${appId}-${Date.now()}`;
+      recordAppUsage(appId);
+      return [...prev, {
+        id,
+        appId,
+        title: appId,
+        x: 80 + (prev.length * 30) % 200,
+        y: 40 + (prev.length * 30) % 150,
+        width: 700,
+        height: 450,
+        minimized: false,
+        maximized: false,
+        zIndex: z,
+        icon: '',
+      }];
+    });
+
+    if (reusedExistingWindow) {
+      addSecurityLog('APP_FOCUS', `Focused existing ${appId} window`);
+      return;
+    }
+
     addSecurityLog('APP_OPEN', `Opened ${appId}`);
   }, [addSecurityLog, recordAppUsage]);
 
@@ -585,6 +637,67 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const closeAllWindows = useCallback(() => {
     setWindows([]);
     addSecurityLog('APP_CLOSE_ALL', 'Closed all open applications');
+  }, [addSecurityLog]);
+
+  const organizeWindows = useCallback(() => {
+    setWindows(prev => {
+      if (prev.length <= 1) {
+        return prev.map(window => ({ ...window, minimized: false }));
+      }
+
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1366;
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+      const marginX = 16;
+      const topOffset = 40;
+      const bottomOffset = 86;
+      const gap = 16;
+
+      const availableWidth = Math.max(900, viewportWidth - marginX * 2);
+      const availableHeight = Math.max(520, viewportHeight - topOffset - bottomOffset);
+      const columns = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(prev.length))));
+      const rows = Math.max(1, Math.ceil(prev.length / columns));
+      const cellWidth = (availableWidth - gap * (columns - 1)) / columns;
+      const cellHeight = (availableHeight - gap * (rows - 1)) / rows;
+      const windowWidth = Math.max(360, Math.min(860, Math.floor(cellWidth)));
+      const windowHeight = Math.max(250, Math.min(620, Math.floor(cellHeight)));
+
+      const sorted = [...prev].sort((a, b) => a.zIndex - b.zIndex);
+      const nextZStart = zIndexCounter.current + 1;
+
+      const layoutById = new Map<string, { x: number; y: number; width: number; height: number; zIndex: number }>();
+      sorted.forEach((windowEntry, index) => {
+        const row = Math.floor(index / columns);
+        const col = index % columns;
+        const cellX = marginX + col * (cellWidth + gap);
+        const cellY = topOffset + row * (cellHeight + gap);
+
+        layoutById.set(windowEntry.id, {
+          x: Math.round(cellX + Math.max(0, (cellWidth - windowWidth) / 2)),
+          y: Math.round(cellY + Math.max(0, (cellHeight - windowHeight) / 2)),
+          width: windowWidth,
+          height: windowHeight,
+          zIndex: nextZStart + index,
+        });
+      });
+
+      zIndexCounter.current = nextZStart + sorted.length;
+      return prev.map(windowEntry => {
+        const layout = layoutById.get(windowEntry.id);
+        if (!layout) return windowEntry;
+        return {
+          ...windowEntry,
+          minimized: false,
+          maximized: false,
+          x: layout.x,
+          y: layout.y,
+          width: layout.width,
+          height: layout.height,
+          zIndex: layout.zIndex,
+        };
+      });
+    });
+
+    addSecurityLog('WINDOWS_ORGANIZED', 'Organized open windows into a clean grid');
   }, [addSecurityLog]);
 
   const minimizeWindow = useCallback((id: string) => {
@@ -634,8 +747,8 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   return (
     <OSContext.Provider value={{
-      isLocked, isBooting, unlock, lock, setPassword, failedAttempts,
-      windows, openApp, closeAllWindows, closeWindow, minimizeWindow, maximizeWindow, focusWindow, moveWindow, resizeWindow, activeWindowId,
+      isLocked, isBooting, unlock, recoverAdminPassword, lock, setPassword, failedAttempts,
+      windows, openApp, organizeWindows, closeAllWindows, closeWindow, minimizeWindow, maximizeWindow, focusWindow, moveWindow, resizeWindow, activeWindowId,
       currentTheme, setTheme, allThemes: themes,
       currentWallpaper, setWallpaper, allWallpapers: wallpapers,
       securityLogs, addSecurityLog,
